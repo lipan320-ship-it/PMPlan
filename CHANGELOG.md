@@ -16,6 +16,7 @@
 - 建立 React、TypeScript、Vite 与 Tauri 2 工程壳、测试基线和本地图标资源。
 - 建立日期、排期和依赖领域规则，以及 Rust SQLite migration、事务、CRUD 与业务级 Tauri commands。
 - 实现周、双周、月时间板、日期导航、任务 CRUD、搜索、展开收起和本地自动保存界面。
+- 实现双击日期快速新增、任务条整体拖动、两端拉伸、按天吸附和失败回滚。
 
 ### Changed
 

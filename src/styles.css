@@ -563,6 +563,10 @@ input:focus-visible {
   position: relative;
 }
 
+.timeline-row--quick-add {
+  cursor: crosshair;
+}
+
 .timeline-row__grid {
   position: absolute;
   inset: 0;
@@ -613,13 +617,16 @@ input:focus-visible {
 .timeline-bar--subtask {
   top: 9px;
   height: 26px;
+  overflow: visible;
   padding: 0 9px;
   border-radius: 7px;
   color: #fff;
   background: linear-gradient(90deg, #3269e2, #255bd7);
   box-shadow: 0 3px 8px rgb(37 91 215 / 22%);
   text-align: left;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
 
 .timeline-bar--subtask:hover {
@@ -627,13 +634,86 @@ input:focus-visible {
   box-shadow: 0 4px 12px rgb(37 91 215 / 30%);
 }
 
-.timeline-bar--subtask span {
+.timeline-bar--subtask:active,
+.timeline-bar--subtask.is-interacting {
+  cursor: grabbing;
+}
+
+.timeline-bar--subtask.is-interacting {
+  z-index: 12;
+  opacity: 0.9;
+  box-shadow: 0 7px 20px rgb(37 91 215 / 36%);
+}
+
+.timeline-bar__label {
   display: block;
   overflow: hidden;
   font-size: 10px;
   font-weight: 750;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 9px;
+  border-radius: 6px;
+  cursor: ew-resize;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.resize-handle::after {
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: 4px;
+  width: 1px;
+  border-radius: 1px;
+  background: rgb(255 255 255 / 85%);
+  content: "";
+}
+
+.resize-handle--start {
+  left: 0;
+}
+
+.resize-handle--end {
+  right: 0;
+}
+
+.timeline-bar--subtask:hover .resize-handle,
+.timeline-bar--subtask.is-interacting .resize-handle {
+  opacity: 1;
+}
+
+.drag-preview {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  width: max-content;
+  max-width: 260px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  color: #fff;
+  background: #203047;
+  box-shadow: 0 6px 18px rgb(13 27 48 / 24%);
+  font-size: 10px;
+  font-weight: 700;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.drag-preview::after {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  border: 4px solid transparent;
+  border-top-color: #203047;
+  content: "";
+  transform: translateX(-50%);
 }
 
 .empty-board,

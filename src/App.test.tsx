@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { createEmptyBoard } from "./app/createStorageGateway";
@@ -98,5 +98,26 @@ describe("App", () => {
 
     expect(await screen.findByRole("heading", { name: "画板还是空的" })).toBeInTheDocument();
     expect((await gateway.loadBoard()).tasks).toEqual([]);
+  });
+
+  it("prefills the clicked date when double-clicking a mother timeline", async () => {
+    const gateway = new MemoryStorageGateway({
+      ...createEmptyBoard(),
+      viewSettings: {
+        viewMode: "biweek",
+        anchorDate: "2026-09-17",
+        showDependencies: true,
+      },
+    });
+    const mother = await gateway.createMotherTask({ name: "快速规划" });
+    render(<App gateway={gateway} />);
+
+    await screen.findByText("快速规划");
+    fireEvent.doubleClick(screen.getByTestId(`mother-timeline-${mother.id}`), {
+      clientX: 1,
+    });
+
+    expect(screen.getByRole("heading", { name: "添加子任务" })).toBeInTheDocument();
+    expect(screen.getByLabelText("开始日期")).toHaveValue("2026-09-14");
   });
 });

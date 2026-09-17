@@ -3,7 +3,9 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type FormEvent,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
 import {
@@ -23,6 +25,13 @@ import type {
 } from "../../domain/models";
 import { getMotherSpan } from "../../domain/schedule";
 import type { StorageGateway } from "../../storage/gateway";
+import {
+  moveSubTask,
+  pixelsToDayOffset,
+  resizeSubTaskEnd,
+  resizeSubTaskStart,
+  type DateRangeUpdate,
+} from "./directManipulation";
 import {
   getDayColumnWidth,
   getViewRange,
@@ -44,7 +53,7 @@ type MotherDialogState =
   | { mode: "rename"; mother: MotherTask };
 
 type SubTaskDialogState =
-  | { mode: "create"; mother: MotherTask }
+  | { mode: "create"; mother: MotherTask; initialDate?: DateOnly }
   | { mode: "edit"; mother: MotherTask; subTask: SubTask };
 
 type DeleteTarget =
@@ -340,6 +349,60 @@ export function BoardPage({ gateway }: BoardPageProps) {
     }
   };
 
+  const handleDirectUpdate = async (
+    mother: MotherTask,
+    subTask: SubTask,
+    update: DateRangeUpdate,
+  ) => {
+    if (
+      update.startDate === subTask.startDate &&
+      update.endDate === subTask.endDate
+    ) {
+      return;
+    }
+
+    const applyDates = (current: BoardSnapshot | null, dates: DateRangeUpdate) =>
+      current
+        ? {
+            ...current,
+            tasks: current.tasks.map((task) =>
+              task.id === mother.id
+                ? {
+                    ...task,
+                    subTasks: task.subTasks.map((item) =>
+                      item.id === subTask.id ? { ...item, ...dates } : item,
+                    ),
+                  }
+                : task,
+            ),
+          }
+        : current;
+
+    setBoard((current) => applyDates(current, update));
+    setBusy(true);
+    try {
+      await gateway.updateSubTask({
+        id: subTask.id,
+        name: subTask.name,
+        ...update,
+      });
+      setToast({
+        tone: "success",
+        message: `已将“${subTask.name}”调整为 ${update.startDate} – ${update.endDate ?? update.startDate}`,
+      });
+    } catch (error) {
+      setBoard((current) =>
+        applyDates(current, {
+          startDate: subTask.startDate,
+          endDate: subTask.endDate,
+        }),
+      );
+      setToast({ tone: "error", message: messageFromError(error) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleConfirmDelete = async () => {
     if (!deleteTarget) {
       return;
@@ -538,12 +601,18 @@ export function BoardPage({ gateway }: BoardPageProps) {
         <TimelineBoard
           busy={busy}
           onAddSubTask={(mother) => setSubTaskDialog({ mode: "create", mother })}
+          onDirectUpdate={(mother, subTask, update) =>
+            void handleDirectUpdate(mother, subTask, update)
+          }
           onEditMother={(mother) => setMotherDialog({ mode: "rename", mother })}
           onEditSubTask={(mother, subTask) =>
             setSubTaskDialog({ mode: "edit", mother, subTask })
           }
           onRequestDeleteMother={(mother) =>
             setDeleteTarget({ kind: "mother", mother })
+          }
+          onQuickAdd={(mother, initialDate) =>
+            setSubTaskDialog({ mode: "create", mother, initialDate })
           }
           onToggleMother={(mother) => void handleToggleMother(mother)}
           range={range}
@@ -579,6 +648,11 @@ export function BoardPage({ gateway }: BoardPageProps) {
           busy={busy}
           initial={
             subTaskDialog.mode === "edit" ? subTaskDialog.subTask : undefined
+          }
+          initialDate={
+            subTaskDialog.mode === "create"
+              ? subTaskDialog.initialDate
+              : undefined
           }
           mode={subTaskDialog.mode}
           motherName={subTaskDialog.mother.name}
@@ -663,6 +737,12 @@ interface TimelineBoardProps {
   onRequestDeleteMother: (mother: MotherTask) => void;
   onAddSubTask: (mother: MotherTask) => void;
   onEditSubTask: (mother: MotherTask, subTask: SubTask) => void;
+  onQuickAdd: (mother: MotherTask, initialDate: DateOnly) => void;
+  onDirectUpdate: (
+    mother: MotherTask,
+    subTask: SubTask,
+    update: DateRangeUpdate,
+  ) => void;
 }
 
 function TimelineBoard({
@@ -675,6 +755,8 @@ function TimelineBoard({
   onRequestDeleteMother,
   onAddSubTask,
   onEditSubTask,
+  onQuickAdd,
+  onDirectUpdate,
 }: TimelineBoardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [viewportWidth, setViewportWidth] = useState(0);
@@ -709,7 +791,7 @@ function TimelineBoard({
       <div className="board-scroll" ref={scrollRef}>
         <div
           className="board-grid"
-          style={{ "--timeline-width": `${timelineWidth}px` } as React.CSSProperties}
+          style={{ "--timeline-width": `${timelineWidth}px` } as CSSProperties}
         >
           <div className="task-column">
             <div className="task-column__header">母任务 / 子任务</div>
@@ -756,8 +838,11 @@ function TimelineBoard({
               {rows.map((row) => (
                 <TimelineRow
                   columnWidth={columnWidth}
+                  busy={busy}
                   key={row.kind === "subTask" ? row.subTask.id : `${row.kind}-${row.mother.id}`}
+                  onDirectUpdate={onDirectUpdate}
                   onEditSubTask={onEditSubTask}
+                  onQuickAdd={onQuickAdd}
                   range={range}
                   row={row}
                 />
@@ -869,10 +954,25 @@ interface TimelineRowProps {
   row: BoardRow;
   range: ViewRange;
   columnWidth: number;
+  busy: boolean;
   onEditSubTask: (mother: MotherTask, subTask: SubTask) => void;
+  onQuickAdd: (mother: MotherTask, initialDate: DateOnly) => void;
+  onDirectUpdate: (
+    mother: MotherTask,
+    subTask: SubTask,
+    update: DateRangeUpdate,
+  ) => void;
 }
 
-function TimelineRow({ row, range, columnWidth, onEditSubTask }: TimelineRowProps) {
+function TimelineRow({
+  row,
+  range,
+  columnWidth,
+  busy,
+  onEditSubTask,
+  onQuickAdd,
+  onDirectUpdate,
+}: TimelineRowProps) {
   const rowClass = `timeline-row timeline-row--${row.kind}`;
   const background = (
     <div
@@ -902,7 +1002,22 @@ function TimelineRow({ row, range, columnWidth, onEditSubTask }: TimelineRowProp
       ? getBarGeometry(span.startDate, span.endDate, range, columnWidth)
       : null;
     return (
-      <div className={rowClass}>
+      <div
+        className={`${rowClass} timeline-row--quick-add`}
+        data-testid={`mother-timeline-${row.mother.id}`}
+        onDoubleClick={(event) => {
+          if (busy) {
+            return;
+          }
+          const rectangle = event.currentTarget.getBoundingClientRect();
+          const rawIndex = Math.floor(
+            (event.clientX - rectangle.left) / columnWidth,
+          );
+          const dayIndex = Math.max(0, Math.min(range.dates.length - 1, rawIndex));
+          onQuickAdd(row.mother, range.dates[dayIndex]);
+        }}
+        title="双击日期快速添加子任务"
+      >
         {background}
         {geometry ? (
           <div
@@ -925,17 +1040,186 @@ function TimelineRow({ row, range, columnWidth, onEditSubTask }: TimelineRowProp
     <div className={rowClass}>
       {background}
       {geometry ? (
-        <button
-          aria-label={`编辑子任务“${row.subTask.name}”`}
-          className="timeline-bar timeline-bar--subtask"
-          onClick={() => onEditSubTask(row.mother, row.subTask)}
-          style={{ left: geometry.left, width: geometry.width }}
-          title={`${row.subTask.name}：${row.subTask.startDate} 至 ${row.subTask.endDate ?? row.subTask.startDate}`}
-        >
-          <span>{row.subTask.name}</span>
-        </button>
+        <InteractiveTaskBar
+          busy={busy}
+          columnWidth={columnWidth}
+          geometry={geometry}
+          mother={row.mother}
+          onCommit={onDirectUpdate}
+          onEdit={onEditSubTask}
+          subTask={row.subTask}
+        />
       ) : null}
     </div>
+  );
+}
+
+type InteractionMode = "move" | "resizeStart" | "resizeEnd";
+
+interface ActiveInteraction {
+  pointerId: number;
+  mode: InteractionMode;
+  startX: number;
+  dayOffset: number;
+  moved: boolean;
+}
+
+interface InteractiveTaskBarProps {
+  mother: MotherTask;
+  subTask: SubTask;
+  geometry: { left: number; width: number };
+  columnWidth: number;
+  busy: boolean;
+  onEdit: (mother: MotherTask, subTask: SubTask) => void;
+  onCommit: (
+    mother: MotherTask,
+    subTask: SubTask,
+    update: DateRangeUpdate,
+  ) => void;
+}
+
+function InteractiveTaskBar({
+  mother,
+  subTask,
+  geometry,
+  columnWidth,
+  busy,
+  onEdit,
+  onCommit,
+}: InteractiveTaskBarProps) {
+  const interactionRef = useRef<ActiveInteraction | null>(null);
+  const suppressClickRef = useRef(false);
+  const [preview, setPreview] = useState<{
+    update: DateRangeUpdate;
+    mode: InteractionMode;
+    dayOffset: number;
+  } | null>(null);
+
+  const beginInteraction = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (busy || event.button !== 0) {
+      return;
+    }
+    const edge = (event.target as HTMLElement).dataset.edge;
+    const mode: InteractionMode =
+      edge === "start"
+        ? "resizeStart"
+        : edge === "end"
+          ? "resizeEnd"
+          : "move";
+    interactionRef.current = {
+      pointerId: event.pointerId,
+      mode,
+      startX: event.clientX,
+      dayOffset: 0,
+      moved: false,
+    };
+    if (typeof event.currentTarget.setPointerCapture === "function") {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+    event.preventDefault();
+  };
+
+  const updateInteraction = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const active = interactionRef.current;
+    if (!active || active.pointerId !== event.pointerId) {
+      return;
+    }
+    const requestedOffset = pixelsToDayOffset(
+      event.clientX - active.startX,
+      columnWidth,
+    );
+    const update =
+      active.mode === "move"
+        ? moveSubTask(subTask, requestedOffset)
+        : active.mode === "resizeStart"
+          ? resizeSubTaskStart(subTask, requestedOffset)
+          : resizeSubTaskEnd(subTask, requestedOffset);
+    const effectiveEnd = subTask.endDate ?? subTask.startDate;
+    const updatedEnd = update.endDate ?? update.startDate;
+    const dayOffset =
+      active.mode === "move"
+        ? diffDays(subTask.startDate, update.startDate)
+        : active.mode === "resizeStart"
+          ? diffDays(subTask.startDate, update.startDate)
+          : diffDays(effectiveEnd, updatedEnd);
+
+    active.dayOffset = dayOffset;
+    active.moved = active.moved || Math.abs(event.clientX - active.startX) >= 4;
+    setPreview({ update, mode: active.mode, dayOffset });
+  };
+
+  const finishInteraction = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const active = interactionRef.current;
+    if (!active || active.pointerId !== event.pointerId) {
+      return;
+    }
+    interactionRef.current = null;
+    const update = preview?.update;
+    setPreview(null);
+    if (
+      typeof event.currentTarget.hasPointerCapture === "function" &&
+      event.currentTarget.hasPointerCapture(event.pointerId)
+    ) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    suppressClickRef.current = active.moved;
+    if (active.moved && update && active.dayOffset !== 0) {
+      onCommit(mother, subTask, update);
+    }
+  };
+
+  const cancelInteraction = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const active = interactionRef.current;
+    if (!active || active.pointerId !== event.pointerId) {
+      return;
+    }
+    interactionRef.current = null;
+    setPreview(null);
+  };
+
+  const style = { left: geometry.left, width: geometry.width };
+  if (preview) {
+    const pixelOffset = preview.dayOffset * columnWidth;
+    if (preview.mode === "move") {
+      style.left += pixelOffset;
+    } else if (preview.mode === "resizeStart") {
+      style.left += pixelOffset;
+      style.width -= pixelOffset;
+    } else {
+      style.width += pixelOffset;
+    }
+  }
+
+  return (
+    <button
+      aria-label={`编辑子任务“${subTask.name}”`}
+      className={`timeline-bar timeline-bar--subtask ${preview ? "is-interacting" : ""}`}
+      disabled={busy}
+      onClick={(event) => {
+        if (suppressClickRef.current) {
+          suppressClickRef.current = false;
+          event.preventDefault();
+          return;
+        }
+        onEdit(mother, subTask);
+      }}
+      onPointerCancel={cancelInteraction}
+      onPointerDown={beginInteraction}
+      onPointerMove={updateInteraction}
+      onPointerUp={finishInteraction}
+      style={style}
+      title={`${subTask.name}：${subTask.startDate} 至 ${subTask.endDate ?? subTask.startDate}；拖动调整日期`}
+    >
+      <span className="resize-handle resize-handle--start" data-edge="start" />
+      <span className="timeline-bar__label">{subTask.name}</span>
+      <span className="resize-handle resize-handle--end" data-edge="end" />
+      {preview ? (
+        <span className="drag-preview" role="status">
+          {preview.update.startDate} → {preview.update.endDate ?? preview.update.startDate}
+        </span>
+      ) : null}
+    </button>
   );
 }
 
@@ -1094,6 +1378,7 @@ interface SubTaskDialogProps {
   mode: "create" | "edit";
   motherName: string;
   initial?: SubTask;
+  initialDate?: DateOnly;
   busy: boolean;
   onCancel: () => void;
   onSubmit: (values: SubTaskFormValues) => Promise<void>;
@@ -1104,13 +1389,16 @@ function SubTaskDialog({
   mode,
   motherName,
   initial,
+  initialDate,
   busy,
   onCancel,
   onSubmit,
   onDelete,
 }: SubTaskDialogProps) {
   const [name, setName] = useState(initial?.name ?? "");
-  const [startDate, setStartDate] = useState(initial?.startDate ?? todayDateOnly());
+  const [startDate, setStartDate] = useState(
+    initial?.startDate ?? initialDate ?? todayDateOnly(),
+  );
   const [endDate, setEndDate] = useState(initial?.endDate ?? "");
   const [error, setError] = useState<string | null>(null);
 
