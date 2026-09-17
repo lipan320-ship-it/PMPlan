@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createEmptyBoard } from "./app/createStorageGateway";
 import { MemoryStorageGateway } from "./storage/memoryGateway";
 import { App } from "./App";
@@ -216,5 +216,40 @@ describe("App", () => {
     const board = await gateway.loadBoard();
     expect(board.tasks.map((task) => task.name)).toEqual(["Imported plan"]);
     expect(board.viewSettings.anchorDate).toBe("2026-10-03");
+  });
+
+  it("shows and copies an AI-ready import template", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    const gateway = new MemoryStorageGateway(createEmptyBoard());
+    render(<App gateway={gateway} />);
+
+    await screen.findByRole("heading", { name: "画板还是空的" });
+    await user.click(screen.getByRole("button", { name: "导入模板" }));
+
+    expect(
+      screen.getByRole("heading", { name: "AI 导入模板" }),
+    ).toBeInTheDocument();
+    const template = screen.getByLabelText("可导入 JSON 模板");
+    expect(template).toBeInstanceOf(HTMLTextAreaElement);
+    const templateValue = (template as HTMLTextAreaElement).value;
+    expect(templateValue).toContain('"version": "1.0"');
+    expect(templateValue).toContain('"dependsOn": ["task-001"]');
+    expect(
+      (
+        await gateway.analyzeImport(
+          { kind: "content", value: templateValue, fileName: "template.json" },
+          "overwrite",
+        )
+      ).valid,
+    ).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: "复制模板" }));
+    expect(writeText).toHaveBeenCalledWith(templateValue);
+    expect(await screen.findByText("导入模板已复制")).toBeInTheDocument();
   });
 });

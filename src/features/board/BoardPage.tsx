@@ -85,6 +85,46 @@ interface ImportState {
   preview: ImportPreview;
 }
 
+const IMPORT_TEMPLATE = `{
+  "version": "1.0",
+  "tasks": [
+    {
+      "id": "task-001",
+      "name": "需求分析",
+      "expanded": true,
+      "dependsOn": [],
+      "subTasks": [
+        {
+          "id": "subtask-001",
+          "name": "梳理目标与范围",
+          "startDate": "2026-10-01",
+          "endDate": "2026-10-02"
+        },
+        {
+          "id": "subtask-002",
+          "name": "确认验收标准",
+          "startDate": "2026-10-03",
+          "endDate": null
+        }
+      ]
+    },
+    {
+      "id": "task-002",
+      "name": "方案实施",
+      "expanded": true,
+      "dependsOn": ["task-001"],
+      "subTasks": [
+        {
+          "id": "subtask-003",
+          "name": "完成第一版交付",
+          "startDate": "2026-10-05",
+          "endDate": "2026-10-09"
+        }
+      ]
+    }
+  ]
+}`;
+
 const weekdayLabels = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 const viewLabels: Record<ViewMode, string> = {
   week: "周",
@@ -171,6 +211,7 @@ export function BoardPage({ gateway }: BoardPageProps) {
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [dependencyDialog, setDependencyDialog] = useState<MotherTask | null>(null);
   const [importState, setImportState] = useState<ImportState | null>(null);
+  const [templateOpen, setTemplateOpen] = useState(false);
   const [confirmOverwrite, setConfirmOverwrite] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -663,6 +704,29 @@ export function BoardPage({ gateway }: BoardPageProps) {
     }
   };
 
+  const handleCopyTemplate = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(IMPORT_TEMPLATE);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = IMPORT_TEMPLATE;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.append(textarea);
+        textarea.select();
+        const copied = document.execCommand("copy");
+        textarea.remove();
+        if (!copied) {
+          throw new Error("浏览器未允许复制");
+        }
+      }
+      setToast({ tone: "success", message: "导入模板已复制" });
+    } catch {
+      setToast({ tone: "error", message: "复制失败，请在模板文本中手动复制。" });
+    }
+  };
+
   if (loadError) {
     return (
       <main className="state-screen">
@@ -813,6 +877,17 @@ export function BoardPage({ gateway }: BoardPageProps) {
               {allExpanded ? "全部收起" : "全部展开"}
             </button>
           ) : null}
+          <button
+            className="button button--quiet button--with-icon"
+            disabled={busy}
+            onClick={() => setTemplateOpen(true)}
+          >
+            <svg aria-hidden="true" className="button__icon" viewBox="0 0 24 24">
+              <path d="M7 3.75h7.5L18.25 7.5V20.25H7z" />
+              <path d="M14.5 3.75V7.5h3.75M10 11.25h5.25M10 14.5h5.25" />
+            </svg>
+            导入模板
+          </button>
           <button
             className="button button--quiet"
             disabled={busy}
@@ -976,6 +1051,13 @@ export function BoardPage({ gateway }: BoardPageProps) {
               void executeImport();
             }
           }}
+        />
+      ) : null}
+
+      {templateOpen ? (
+        <ImportTemplateDialog
+          onCancel={() => setTemplateOpen(false)}
+          onCopy={() => void handleCopyTemplate()}
         />
       ) : null}
 
@@ -1862,6 +1944,49 @@ function DialogShell({ title, children, onCancel }: DialogShellProps) {
         {children}
       </section>
     </div>
+  );
+}
+
+function ImportTemplateDialog({
+  onCancel,
+  onCopy,
+}: {
+  onCancel: () => void;
+  onCopy: () => void;
+}) {
+  return (
+    <DialogShell title="AI 导入模板" onCancel={onCancel}>
+      <div className="form-stack import-template">
+        <div className="import-template__guide">
+          <strong>让 AI 帮你整理规划</strong>
+          <p>
+            复制下面的模板并连同原始规划发给 AI，让它替换示例内容，且只返回 JSON，
+            不要添加 Markdown 代码块。将结果保存为 <code>.json</code> 后即可导入。
+          </p>
+        </div>
+        <ul className="import-template__rules">
+          <li>所有 id 必须唯一；dependsOn 只能填写前置母任务的 id。</li>
+          <li>日期使用 YYYY-MM-DD；单日任务的 endDate 填 null。</li>
+          <li>删除不需要的示例任务，不要保留占位内容。</li>
+        </ul>
+        <label className="import-template__content">
+          <span>可导入 JSON 模板</span>
+          <textarea aria-label="可导入 JSON 模板" readOnly value={IMPORT_TEMPLATE} />
+        </label>
+        <footer className="modal-actions modal-actions--end">
+          <button className="button button--quiet" onClick={onCancel} type="button">
+            关闭
+          </button>
+          <button className="button button--primary button--with-icon" onClick={onCopy} type="button">
+            <svg aria-hidden="true" className="button__icon" viewBox="0 0 24 24">
+              <rect height="12" rx="1.5" width="10" x="9" y="8" />
+              <path d="M15 8V5.5A1.5 1.5 0 0 0 13.5 4h-7A1.5 1.5 0 0 0 5 5.5v9A1.5 1.5 0 0 0 6.5 16H9" />
+            </svg>
+            复制模板
+          </button>
+        </footer>
+      </div>
+    </DialogShell>
   );
 }
 
