@@ -6,6 +6,7 @@ coverage/
 # Tauri / Rust
 target/
 src-tauri/target/
+src-tauri/gen/schemas/
 
 # Local databases and user data
 *.db
@@ -33,3 +34,6 @@ Thumbs.db
 *.appx
 *.dmg
 *.AppImage
+
+# Workspace-local temporary files
+.tmp/

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img">
+  <title>工作规划时间板</title>
+  <defs>
+    <linearGradient id="background" x1="80" y1="48" x2="432" y2="464">
+      <stop offset="0" stop-color="#4b7df0" />
+      <stop offset="1" stop-color="#1c48b7" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#background)" />
+  <path
+    d="M118 148h276M118 256h174M118 364h276"
+    fill="none"
+    stroke="#ffffff"
+    stroke-linecap="round"
+    stroke-width="42"
+  />
+  <circle cx="350" cy="256" r="58" fill="#ffffff" />
+</svg>

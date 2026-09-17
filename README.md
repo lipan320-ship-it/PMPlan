@@ -4,14 +4,36 @@
 
 ## 当前阶段
 
-项目目前处于产品定义与工程准备阶段，仓库中包含：
+项目目前已完成 M1 工程基础与离线桌面壳，下一阶段为 M2 领域规则与 SQLite 数据内核。仓库中包含：
 
 - 已整合的产品需求文档；
 - 可供视觉和交互参考的 HTML 原型；
 - 已接受的关键技术决策；
 - 迭代与变更记录规范。
+- 可构建的 React/TypeScript/Vite/Tauri 工程壳。
 
 当前原型不是可发布产品，也不应作为正式运行入口。
+
+## 本地开发
+
+前置环境：
+
+- Node.js 与 npm；
+- Rust MSVC 工具链；
+- Visual Studio Build Tools 的 `Desktop development with C++` 工作负载；
+- Windows WebView2 Runtime。
+
+常用命令：
+
+```powershell
+npm install
+npm run dev
+npm run check:web
+npm run check:rust
+npm run build:desktop
+```
+
+`build:desktop` 生成不打安装包的 debug EXE，用于开发阶段验证。正式 NSIS 安装包在 M7 发布阶段构建。
 
 ## 产品与技术方向
 
