@@ -1,0 +1,1730 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-error-container":"#93000a","surface-bright":"#f8f9ff","primary-fixed-dim":"#b4c5ff","surface-container-lowest":"#ffffff","on-primary":"#ffffff","primary-container":"#2563eb","on-primary-container":"#eeefff","surface-container":"#e5eeff","surface-container-highest":"#d3e4fe","on-tertiary":"#ffffff","on-tertiary-fixed-variant":"#005137","on-tertiary-container":"#bdffdc","surface-variant":"#d3e4fe","tertiary-fixed":"#85f8c4","surface-tint":"#0053db","outline":"#737686","secondary-container":"#dae2fd","inverse-surface":"#213145","primary-fixed":"#dbe1ff","tertiary-fixed-dim":"#68dba9","surface-dim":"#cbdbf5","on-secondary-fixed-variant":"#3f465c","inverse-primary":"#b4c5ff","error-container":"#ffdad6","surface-container-high":"#dce9ff","tertiary":"#006243","on-primary-fixed-variant":"#003ea8","on-surface-variant":"#434655","surface":"#f8f9ff","background":"#f8f9ff","on-tertiary-fixed":"#002114","inverse-on-surface":"#eaf1ff","on-surface":"#0b1c30","secondary-fixed":"#dae2fd","on-error":"#ffffff","error":"#ba1a1a","outline-variant":"#c3c6d7","secondary-fixed-dim":"#bec6e0","primary":"#004ac6","on-primary-fixed":"#00174b","on-secondary":"#ffffff","on-background":"#0b1c30","on-secondary-container":"#5c647a","on-secondary-fixed":"#131b2e","surface-container-low":"#eff4ff","secondary":"#565e74","tertiary-container":"#007d57"},borderRadius:{DEFAULT:"0.125rem",lg:"0.25rem",xl:"0.5rem",full:"0.75rem"},spacing:{"space-2xl":"2rem",margin:"1.5rem","space-sm":"0.5rem","space-md":"0.75rem","space-2xs":"0.125rem","margin-mobile":"0.75rem","space-xs":"0.25rem","space-lg":"1rem","gutter-compact":"0.5rem",gutter:"0.75rem","space-xl":"1.5rem"},fontFamily:{"body-sm":["Geist"],"label-md":["Geist"],"headline-xl-mobile":["Geist"],"headline-lg":["Geist"],"body-md":["Geist"],"code-sm":["JetBrains Mono"],"headline-xl":["Geist"],"headline-sm":["Geist"],"label-sm":["Geist"],"body-lg":["Geist"],"headline-lg-mobile":["Geist"]},fontSize:{"body-sm":["12px",{lineHeight:"16px",letterSpacing:"0em",fontWeight:"400"}],"label-md":["12px",{lineHeight:"16px",letterSpacing:"0.01em",fontWeight:"500"}],"headline-xl-mobile":["22px",{lineHeight:"28px",letterSpacing:"-0.015em",fontWeight:"600"}],"headline-lg":["22px",{lineHeight:"28px",letterSpacing:"-0.015em",fontWeight:"600"}],"body-md":["13px",{lineHeight:"18px",letterSpacing:"0em",fontWeight:"400"}],"code-sm":["11px",{lineHeight:"14px",letterSpacing:"0em",fontWeight:"500"}],"headline-xl":["28px",{lineHeight:"36px",letterSpacing:"-0.02em",fontWeight:"600"}],"headline-sm":["16px",{lineHeight:"22px",letterSpacing:"-0.01em",fontWeight:"600"}],"label-sm":["11px",{lineHeight:"14px",letterSpacing:"0.02em",fontWeight:"500"}],"body-lg":["15px",{lineHeight:"22px",letterSpacing:"-0.005em",fontWeight:"400"}],"headline-lg-mobile":["18px",{lineHeight:"24px",letterSpacing:"-0.01em",fontWeight:"600"}]}}}}</script></head><body class="bg-surface font-body-md text-body-md text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-64 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-50 flex flex-col justify-between select-none"><div class="flex flex-col"><div class="h-14 px-space-md flex items-center gap-space-sm bg-surface-container-lowest"><div class="w-7 h-7 rounded-lg bg-primary-container flex items-center justify-center text-on-primary shadow-[0_1px_3px_rgba(37,99,235,0.2)]"><span class="material-symbols-outlined text-[18px]">view_timeline</span></div><div class="flex flex-col min-w-0"><span class="font-headline-sm text-headline-sm tracking-tight text-on-surface truncate leading-tight">工作规划时间板</span><span class="font-code-sm text-code-sm text-secondary truncate">PLANNER v3.2</span></div></div><div class="px-space-md py-space-sm"><div class="flex items-center justify-between px-space-xs py-space-2xs text-secondary font-label-sm text-label-sm uppercase tracking-wider"><span class="">视图导航</span><span class="material-symbols-outlined text-[14px] text-secondary cursor-pointer hover:text-on-surface">tune</span></div></div><nav class="flex flex-col gap-space-2xs px-space-sm" data-active-classes="bg-secondary-container text-on-secondary-container font-semibold"><a aria-current="page" class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg transition-all bg-secondary-container text-on-secondary-container font-semibold" data-path="timeline-gantt-board" href="#"><span class="material-symbols-outlined text-[18px]">timeline</span>时间线甘特图</a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-low hover:text-on-surface transition-all" data-path="work-breakdown-list" href="#"><span class="material-symbols-outlined text-[18px]">account_tree</span>工作分解 (WBS)</a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-low hover:text-on-surface transition-all" data-path="milestone-roadmap" href="#"><span class="material-symbols-outlined text-[18px]">flag</span>里程碑路线图</a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-low hover:text-on-surface transition-all" data-path="dependency-analysis" href="#"><span class="material-symbols-outlined text-[18px]">hub</span>依赖网络与预警</a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-low hover:text-on-surface transition-all" data-path="team-capacity-planner" href="#"><span class="material-symbols-outlined text-[18px]">group_work</span>团队负荷排期</a></nav><div class="px-space-md pt-space-lg pb-space-xs"><div class="px-space-xs py-space-2xs text-secondary font-label-sm text-label-sm uppercase tracking-wider"><span class="">快速筛选</span></div><div class="flex flex-col gap-space-2xs mt-space-xs"><div class="flex items-center justify-between px-space-sm py-space-xs rounded text-on-surface-variant hover:bg-surface-container-low cursor-pointer"><span class="flex items-center gap-space-xs text-body-sm font-body-sm"><span class="w-2 h-2 rounded-full bg-tertiary-container"></span>进行中任务</span><span class="text-code-sm font-code-sm text-secondary">42</span></div><div class="flex items-center justify-between px-space-sm py-space-xs rounded text-on-surface-variant hover:bg-surface-container-low cursor-pointer"><span class="flex items-center gap-space-xs text-body-sm font-body-sm"><span class="w-2 h-2 rounded-full bg-error"></span>冲突预警</span><span class="text-code-sm font-code-sm text-error font-medium">3</span></div></div></div></div><div class="p-space-sm bg-surface-container-lowest"><div class="p-space-sm bg-surface-container-low rounded-xl flex items-center justify-between"><div class="flex items-center gap-space-xs"><span class="w-2 h-2 rounded-full bg-tertiary-container"></span><span class="font-label-sm text-label-sm text-on-surface">实时云同步已就绪</span></div><span class="material-symbols-outlined text-[16px] text-secondary">cloud_done</span></div></div></aside><div class="pl-64 flex flex-col min-h-screen"><header class="fixed top-0 left-64 right-0 h-14 bg-surface-container-lowest/90 backdrop-blur-md shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-xl"><div class="flex items-center gap-space-md min-w-0"><div class="flex items-center gap-space-xs text-body-sm font-body-sm text-secondary shrink-0"><span class="material-symbols-outlined text-[16px] text-secondary">folder_open</span><span class="">项目规划</span><span class="material-symbols-outlined text-[14px] text-outline-variant">chevron_right</span></div><div class="flex items-center gap-space-xs truncate"><h1 class="font-headline-sm text-headline-sm text-on-surface tracking-tight truncate">2026 Q3 产品路线与排期</h1><span class="material-symbols-outlined text-[16px] text-secondary cursor-pointer hover:text-on-surface">unfold_more</span></div></div><div class="flex items-center gap-space-lg shrink-0"><div class="hidden xl:flex items-center gap-space-xs bg-surface-container-low p-space-2xs rounded-lg"><button class="px-space-sm py-space-2xs rounded text-label-sm font-label-sm text-on-surface bg-surface-container-lowest shadow-[0_1px_2px_rgba(0,0,0,0.05)]" type="button">所有职能</button><button class="px-space-sm py-space-2xs rounded text-label-sm font-label-sm text-secondary hover:text-on-surface" type="button">研发工程</button><button class="px-space-sm py-space-2xs rounded text-label-sm font-label-sm text-secondary hover:text-on-surface" type="button">交互体验</button><button class="px-space-sm py-space-2xs rounded text-label-sm font-label-sm text-secondary hover:text-on-surface" type="button">关键依赖</button></div><div class="flex items-center -space-x-space-xs"><div class="w-7 h-7 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed font-code-sm text-code-sm font-semibold ring-2 ring-surface-container-lowest" title="王浩 (Lead Eng)">WH</div><div class="w-7 h-7 rounded-full bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed font-code-sm text-code-sm font-semibold ring-2 ring-surface-container-lowest" title="李琳 (Product Owner)">LL</div><div class="w-7 h-7 rounded-full bg-tertiary-fixed flex items-center justify-center text-on-tertiary-fixed font-code-sm text-code-sm font-semibold ring-2 ring-surface-container-lowest" title="赵航 (Tech Arch)">ZH</div><div class="w-7 h-7 rounded-full bg-surface-container-high flex items-center justify-center text-secondary font-label-sm text-label-sm ring-2 ring-surface-container-lowest">+8</div></div><div class="h-4 w-px bg-outline-variant/40"></div><div class="flex items-center gap-space-xs"><button class="p-space-xs rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors" title="使用指南与快捷键" type="button"><span class="material-symbols-outlined text-[20px]">help_outline</span></button><input id="json-file-input" type="file" accept=".json,application/json" class="hidden"><button id="btn-open-import-modal" class="flex items-center gap-space-xs px-space-sm py-space-xs bg-surface-container-low text-on-surface hover:bg-surface-container rounded-lg font-label-md text-label-md transition-colors shadow-sm" type="button"><span class="material-symbols-outlined text-[16px] text-primary">file_upload</span><span class="">导入 JSON</span></button><button id="btn-open-export-modal" class="flex items-center gap-space-xs px-space-md py-space-xs bg-primary-container text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary transition-colors shadow-[0_1px_3px_rgba(37,99,235,0.2)]" type="button"><span class="material-symbols-outlined text-[16px]">file_download</span><span class="">导出规划 JSON</span></button></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="relative pt-14 w-full bg-surface flex-1 min-h-0"><div class="flex flex-col w-full text-on-surface select-none">
+<!-- TOP CONTROLS & TIMELINE STATUS TOOLBAR -->
+<div class="bg-surface-container-lowest px-space-xl py-space-sm shadow-sm z-30 sticky top-0 flex flex-wrap items-center justify-between gap-space-md">
+<!-- Left: Temporal Window Controls -->
+<div class="flex items-center gap-space-md">
+<!-- Navigation buttons -->
+<div class="flex items-center bg-surface-container-low rounded-lg p-space-2xs shadow-sm">
+<button class="p-space-xs rounded-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-lowest transition-all" id="btn-prev" title="前一周期">
+<span class="material-symbols-outlined text-[18px] block">chevron_left</span>
+</button>
+<button class="px-space-sm py-space-2xs rounded-md font-label-md text-label-md text-primary font-semibold hover:bg-surface-container-lowest transition-all" id="btn-today">
+          今天
+        </button>
+<button class="p-space-xs rounded-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-lowest transition-all" id="btn-next" title="后一周期">
+<span class="material-symbols-outlined text-[18px] block">chevron_right</span>
+</button>
+</div>
+<!-- Current Date Range Display -->
+<div class="flex items-center gap-space-xs px-space-sm py-space-2xs bg-surface-container rounded-lg">
+<span class="material-symbols-outlined text-[16px] text-primary">calendar_month</span>
+<span class="font-code-sm text-code-sm font-semibold tracking-tight text-on-surface" id="label-date-range">2026/09/14 – 2026/09/27</span>
+</div>
+<!-- View granularity switcher -->
+<div class="flex items-center bg-surface-container-low p-space-2xs rounded-lg text-secondary">
+<button class="view-btn px-space-sm py-space-2xs rounded-md font-label-sm text-label-sm hover:text-on-surface transition-all" data-view="week">
+          周 (7天)
+        </button>
+<button class="view-btn px-space-sm py-space-2xs rounded-md font-label-sm text-label-sm bg-surface-container-lowest text-primary font-semibold shadow-sm transition-all" data-view="biweek">
+          双周 (14天)
+        </button>
+<button class="view-btn px-space-sm py-space-2xs rounded-md font-label-sm text-label-sm hover:text-on-surface transition-all" data-view="month">
+          月 (30天)
+        </button>
+</div>
+</div>
+<!-- Right: Display Options, Conflicts & Actions -->
+<div class="flex items-center gap-space-lg">
+<!-- Dependency display toggle -->
+<label class="flex items-center gap-space-xs cursor-pointer select-none">
+<input checked="" class="w-3.5 h-3.5 accent-primary rounded cursor-pointer" id="toggle-deps" type="checkbox">
+<span class="font-label-md text-label-md text-on-surface-variant font-medium">显示前后置依赖连线</span>
+</label>
+<!-- Dynamic Conflict Warning Badge -->
+<div class="flex items-center gap-space-xs px-space-sm py-space-2xs bg-error-container text-on-error-container rounded-full text-label-sm font-label-sm font-semibold shadow-sm animate-pulse" id="conflict-pill">
+<span class="material-symbols-outlined text-[14px]">warning</span>
+<span id="conflict-count-text" class="">2 个依赖冲突待关注</span>
+</div>
+<div class="h-4 w-px bg-outline-variant/30"></div>
+<!-- Quick Expand / Collapse All -->
+<button class="flex items-center gap-space-2xs px-space-sm py-space-2xs rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-low font-label-md text-label-md transition-colors" id="btn-toggle-all-rows">
+<span class="material-symbols-outlined text-[16px]">unfold_less</span>
+<span class="">折叠全部</span>
+</button>
+<!-- Add New Mother Task -->
+<button class="flex items-center gap-space-2xs px-space-md py-space-xs bg-primary text-on-primary rounded-lg font-label-md text-label-md font-medium hover:bg-primary-container shadow-sm transition-colors" id="btn-create-mother">
+<span class="material-symbols-outlined text-[16px]">add</span>
+<span class="">新建母任务</span>
+</button>
+</div>
+</div>
+<!-- MAIN DUAL-PANE CANVAS -->
+<div class="relative w-full flex bg-surface-container-lowest overflow-hidden">
+<!-- LEFT PANEL: Task Structure & Tree Hierarchy (Fixed 340px) -->
+<div class="w-[340px] shrink-0 bg-surface-container-lowest flex flex-col z-20 shadow-[2px_0_6px_rgba(0,0,0,0.03)]">
+<!-- Header Cell -->
+<div class="h-12 px-space-md bg-surface-container-low flex items-center justify-between select-none">
+<div class="flex items-center gap-space-xs text-on-surface font-label-md text-label-md font-semibold">
+<span class="material-symbols-outlined text-[16px] text-primary">format_list_bulleted</span>
+<span class="">任务结构 (WBS)</span>
+<span class="px-space-xs py-0.5 rounded-full bg-surface-container-highest text-secondary text-[10px] font-code-sm" id="total-tasks-pill">4母 / 9子</span>
+</div>
+<span class="font-code-sm text-code-sm text-secondary tracking-wider">SCHEDULE</span>
+</div>
+<!-- Rows container on left (Height synchronized with right grid via fixed 40px rows) -->
+<div class="flex flex-col" id="left-tree-rows"><div class="h-10 px-space-md flex items-center justify-between bg-surface-container-low/60 hover:bg-surface-container transition-colors group">
+        <div class="flex items-center gap-space-xs min-w-0 flex-1">
+          <button data-toggle-mother="M1" class="p-space-2xs text-secondary hover:text-on-surface transition-transform duration-150 " title="折叠/展开">
+            <span class="material-symbols-outlined text-[16px]">expand_more</span>
+          </button>
+          <span class="material-symbols-outlined text-[16px] text-primary">folder</span>
+          <span class="font-headline-sm text-[13px] font-semibold text-on-surface truncate" title="Slots第一期策略">Slots第一期策略</span>
+          
+          
+        </div>
+        <div class="flex items-center gap-space-2xs opacity-80 group-hover:opacity-100 shrink-0">
+          <button data-add-dep="M1" class="px-space-xs py-0.5 rounded text-[11px] font-label-sm bg-surface-container-lowest hover:bg-primary hover:text-on-primary text-secondary shadow-sm transition-all" title="配置依赖">
+            + 依赖
+          </button>
+          <button data-add-child="M1" class="p-0.5 rounded hover:bg-primary hover:text-on-primary text-secondary transition-all" title="添加子任务">
+            <span class="material-symbols-outlined text-[16px]">add</span>
+          </button>
+        </div>
+      </div><div class="h-10 pl-8 pr-space-md flex items-center justify-between hover:bg-surface-container-low transition-colors border-b border-outline-variant/10">
+            <div class="flex items-center gap-space-xs min-w-0 flex-1">
+              <span class="material-symbols-outlined text-[14px] text-outline">subdirectory_arrow_right</span>
+              <span class="font-body-md text-on-surface truncate cursor-pointer hover:text-primary" title="点击编辑排期" data-edit-child="M1,C101">
+                体验模板设计
+              </span>
+            </div>
+            <span class="font-code-sm text-[11px] text-secondary font-medium shrink-0 bg-surface-container px-space-xs py-0.5 rounded">
+              09-17 - 09-20
+            </span>
+          </div><div class="h-10 pl-8 pr-space-md flex items-center justify-between hover:bg-surface-container-low transition-colors border-b border-outline-variant/10">
+            <div class="flex items-center gap-space-xs min-w-0 flex-1">
+              <span class="material-symbols-outlined text-[14px] text-outline">subdirectory_arrow_right</span>
+              <span class="font-body-md text-on-surface truncate cursor-pointer hover:text-primary" title="点击编辑排期" data-edit-child="M1,C102">
+                策略开发
+              </span>
+            </div>
+            <span class="font-code-sm text-[11px] text-secondary font-medium shrink-0 bg-surface-container px-space-xs py-0.5 rounded">
+              09-21 - 09-22
+            </span>
+          </div><div class="h-10 pl-8 pr-space-md flex items-center justify-between hover:bg-surface-container-low transition-colors border-b border-outline-variant/10">
+            <div class="flex items-center gap-space-xs min-w-0 flex-1">
+              <span class="material-symbols-outlined text-[14px] text-outline">subdirectory_arrow_right</span>
+              <span class="font-body-md text-on-surface truncate cursor-pointer hover:text-primary" title="点击编辑排期" data-edit-child="M1,C103">
+                冒烟测试
+              </span>
+            </div>
+            <span class="font-code-sm text-[11px] text-secondary font-medium shrink-0 bg-surface-container px-space-xs py-0.5 rounded">
+              09-22 - 09-22
+            </span>
+          </div><div class="h-10 px-space-md flex items-center justify-between bg-surface-container-low/60 hover:bg-surface-container transition-colors group">
+        <div class="flex items-center gap-space-xs min-w-0 flex-1">
+          <button data-toggle-mother="M2" class="p-space-2xs text-secondary hover:text-on-surface transition-transform duration-150 " title="折叠/展开">
+            <span class="material-symbols-outlined text-[16px]">expand_more</span>
+          </button>
+          <span class="material-symbols-outlined text-[16px] text-primary">folder</span>
+          <span class="font-headline-sm text-[13px] font-semibold text-on-surface truncate" title="Slots第二期策略">Slots第二期策略</span>
+          <span class="material-symbols-outlined text-[15px] text-error" title="存在排期前置依赖冲突！">warning</span>
+          <span class="px-space-xs py-0.5 rounded bg-primary-fixed text-on-primary-fixed font-code-sm text-[10px]">依赖</span>
+        </div>
+        <div class="flex items-center gap-space-2xs opacity-80 group-hover:opacity-100 shrink-0">
+          <button data-add-dep="M2" class="px-space-xs py-0.5 rounded text-[11px] font-label-sm bg-surface-container-lowest hover:bg-primary hover:text-on-primary text-secondary shadow-sm transition-all" title="配置依赖">
+            + 依赖
+          </button>
+          <button data-add-child="M2" class="p-0.5 rounded hover:bg-primary hover:text-on-primary text-secondary transition-all" title="添加子任务">
+            <span class="material-symbols-outlined text-[16px]">add</span>
+          </button>
+        </div>
+      </div><div class="h-10 pl-8 pr-space-md flex items-center justify-between hover:bg-surface-container-low transition-colors border-b border-outline-variant/10">
+            <div class="flex items-center gap-space-xs min-w-0 flex-1">
+              <span class="material-symbols-outlined text-[14px] text-outline">subdirectory_arrow_right</span>
+              <span class="font-body-md text-on-surface truncate cursor-pointer hover:text-primary" title="点击编辑排期" data-edit-child="M2,C201">
+                规则引擎重构
+              </span>
+            </div>
+            <span class="font-code-sm text-[11px] text-secondary font-medium shrink-0 bg-surface-container px-space-xs py-0.5 rounded">
+              09-21 - 09-24
+            </span>
+          </div><div class="h-10 pl-8 pr-space-md flex items-center justify-between hover:bg-surface-container-low transition-colors border-b border-outline-variant/10">
+            <div class="flex items-center gap-space-xs min-w-0 flex-1">
+              <span class="material-symbols-outlined text-[14px] text-outline">subdirectory_arrow_right</span>
+              <span class="font-body-md text-on-surface truncate cursor-pointer hover:text-primary" title="点击编辑排期" data-edit-child="M2,C202">
+                灰度放量测试
+              </span>
+            </div>
+            <span class="font-code-sm text-[11px] text-secondary font-medium shrink-0 bg-surface-container px-space-xs py-0.5 rounded">
+              09-25 - 09-27
+            </span>
+          </div><div class="h-10 px-space-md flex items-center justify-between bg-surface-container-low/60 hover:bg-surface-container transition-colors group">
+        <div class="flex items-center gap-space-xs min-w-0 flex-1">
+          <button data-toggle-mother="M3" class="p-space-2xs text-secondary hover:text-on-surface transition-transform duration-150 " title="折叠/展开">
+            <span class="material-symbols-outlined text-[16px]">expand_more</span>
+          </button>
+          <span class="material-symbols-outlined text-[16px] text-primary">folder</span>
+          <span class="font-headline-sm text-[13px] font-semibold text-on-surface truncate" title="VIP成长与周任务系统">VIP成长与周任务系统</span>
+          <span class="material-symbols-outlined text-[15px] text-error" title="存在排期前置依赖冲突！">warning</span>
+          <span class="px-space-xs py-0.5 rounded bg-primary-fixed text-on-primary-fixed font-code-sm text-[10px]">依赖</span>
+        </div>
+        <div class="flex items-center gap-space-2xs opacity-80 group-hover:opacity-100 shrink-0">
+          <button data-add-dep="M3" class="px-space-xs py-0.5 rounded text-[11px] font-label-sm bg-surface-container-lowest hover:bg-primary hover:text-on-primary text-secondary shadow-sm transition-all" title="配置依赖">
+            + 依赖
+          </button>
+          <button data-add-child="M3" class="p-0.5 rounded hover:bg-primary hover:text-on-primary text-secondary transition-all" title="添加子任务">
+            <span class="material-symbols-outlined text-[16px]">add</span>
+          </button>
+        </div>
+      </div><div class="h-10 pl-8 pr-space-md flex items-center justify-between hover:bg-surface-container-low transition-colors border-b border-outline-variant/10">
+            <div class="flex items-center gap-space-xs min-w-0 flex-1">
+              <span class="material-symbols-outlined text-[14px] text-outline">subdirectory_arrow_right</span>
+              <span class="font-body-md text-on-surface truncate cursor-pointer hover:text-primary" title="点击编辑排期" data-edit-child="M3,C301">
+                成长值接口改造
+              </span>
+            </div>
+            <span class="font-code-sm text-[11px] text-secondary font-medium shrink-0 bg-surface-container px-space-xs py-0.5 rounded">
+              09-25 - 09-26
+            </span>
+          </div><div class="h-10 pl-8 pr-space-md flex items-center justify-between hover:bg-surface-container-low transition-colors border-b border-outline-variant/10">
+            <div class="flex items-center gap-space-xs min-w-0 flex-1">
+              <span class="material-symbols-outlined text-[14px] text-outline">subdirectory_arrow_right</span>
+              <span class="font-body-md text-on-surface truncate cursor-pointer hover:text-primary" title="点击编辑排期" data-edit-child="M3,C302">
+                周任务下发联调
+              </span>
+            </div>
+            <span class="font-code-sm text-[11px] text-secondary font-medium shrink-0 bg-surface-container px-space-xs py-0.5 rounded">
+              09-27 - 09-29
+            </span>
+          </div><div class="h-10 px-space-md flex items-center justify-between bg-surface-container-low/60 hover:bg-surface-container transition-colors group">
+        <div class="flex items-center gap-space-xs min-w-0 flex-1">
+          <button data-toggle-mother="M4" class="p-space-2xs text-secondary hover:text-on-surface transition-transform duration-150 " title="折叠/展开">
+            <span class="material-symbols-outlined text-[16px]">expand_more</span>
+          </button>
+          <span class="material-symbols-outlined text-[16px] text-primary">folder</span>
+          <span class="font-headline-sm text-[13px] font-semibold text-on-surface truncate" title="埋点开发及底层上报">埋点开发及底层上报</span>
+          
+          
+        </div>
+        <div class="flex items-center gap-space-2xs opacity-80 group-hover:opacity-100 shrink-0">
+          <button data-add-dep="M4" class="px-space-xs py-0.5 rounded text-[11px] font-label-sm bg-surface-container-lowest hover:bg-primary hover:text-on-primary text-secondary shadow-sm transition-all" title="配置依赖">
+            + 依赖
+          </button>
+          <button data-add-child="M4" class="p-0.5 rounded hover:bg-primary hover:text-on-primary text-secondary transition-all" title="添加子任务">
+            <span class="material-symbols-outlined text-[16px]">add</span>
+          </button>
+        </div>
+      </div><div class="h-10 pl-8 pr-space-md flex items-center justify-between hover:bg-surface-container-low transition-colors border-b border-outline-variant/10">
+            <div class="flex items-center gap-space-xs min-w-0 flex-1">
+              <span class="material-symbols-outlined text-[14px] text-outline">subdirectory_arrow_right</span>
+              <span class="font-body-md text-on-surface truncate cursor-pointer hover:text-primary" title="点击编辑排期" data-edit-child="M4,C401">
+                上报协议定义
+              </span>
+            </div>
+            <span class="font-code-sm text-[11px] text-secondary font-medium shrink-0 bg-surface-container px-space-xs py-0.5 rounded">
+              09-15 - 09-18
+            </span>
+          </div><div class="h-10 pl-8 pr-space-md flex items-center justify-between hover:bg-surface-container-low transition-colors border-b border-outline-variant/10">
+            <div class="flex items-center gap-space-xs min-w-0 flex-1">
+              <span class="material-symbols-outlined text-[14px] text-outline">subdirectory_arrow_right</span>
+              <span class="font-body-md text-on-surface truncate cursor-pointer hover:text-primary" title="点击编辑排期" data-edit-child="M4,C402">
+                SDK埋点注入
+              </span>
+            </div>
+            <span class="font-code-sm text-[11px] text-secondary font-medium shrink-0 bg-surface-container px-space-xs py-0.5 rounded">
+              09-19 - 09-23
+            </span>
+          </div></div>
+<!-- Bottom Add Task Quick Prompt -->
+<div class="p-space-md bg-surface-container-low/40">
+<div class="p-space-sm rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-xs">
+<div class="flex items-center gap-space-xs text-primary font-label-sm text-label-sm font-semibold">
+<span class="material-symbols-outlined text-[16px]">tips_and_updates</span>
+<span class="">规划看板操作提示</span>
+</div>
+<p class="font-body-sm text-body-sm text-secondary leading-snug">
+            拖拽子任务条可平移排期并实时吸附；双击空白网格快速新建子任务；点击「+ 依赖」建立跨任务关联防冲突。
+          </p>
+</div>
+</div>
+</div>
+<!-- RIGHT PANEL: Gantt Viewport with Synchronized Canvas & Sticky Header -->
+<div class="flex-1 overflow-x-auto overflow-y-hidden relative bg-surface-bright" id="timeline-scroll-container">
+<!-- Time Grid Canvas Inner (Width dynamic to total days) -->
+<div class="relative min-h-[580px]" id="timeline-inner" style="width: 840px;">
+<!-- Sticky Timeline Days Axis (Height: 48px / h-12) -->
+<div class="sticky top-0 z-20 h-12 flex bg-surface-container-low shadow-sm select-none" id="timeline-header-axis"><div class="shrink-0 flex flex-col items-center justify-center border-r border-outline-variant/20 font-code-sm text-on-surface" style="width: 60px;">
+        <span class="text-[10px] leading-tight opacity-75">9/14</span>
+        <span class="text-[11px] font-semibold">周一</span>
+      </div><div class="shrink-0 flex flex-col items-center justify-center border-r border-outline-variant/20 font-code-sm text-on-surface" style="width: 60px;">
+        <span class="text-[10px] leading-tight opacity-75">9/15</span>
+        <span class="text-[11px] font-semibold">周二</span>
+      </div><div class="shrink-0 flex flex-col items-center justify-center border-r border-outline-variant/20 font-code-sm text-on-surface" style="width: 60px;">
+        <span class="text-[10px] leading-tight opacity-75">9/16</span>
+        <span class="text-[11px] font-semibold">周三</span>
+      </div><div class="shrink-0 flex flex-col items-center justify-center border-r border-outline-variant/20 font-code-sm bg-tertiary-fixed/30 text-on-tertiary-fixed font-bold" style="width: 60px;">
+        <span class="text-[10px] leading-tight opacity-75">9/17</span>
+        <span class="text-[11px] font-semibold">周四</span>
+      </div><div class="shrink-0 flex flex-col items-center justify-center border-r border-outline-variant/20 font-code-sm text-on-surface" style="width: 60px;">
+        <span class="text-[10px] leading-tight opacity-75">9/18</span>
+        <span class="text-[11px] font-semibold">周五</span>
+      </div><div class="shrink-0 flex flex-col items-center justify-center border-r border-outline-variant/20 font-code-sm bg-surface-container/50 text-secondary" style="width: 60px;">
+        <span class="text-[10px] leading-tight opacity-75">9/19</span>
+        <span class="text-[11px] font-semibold">周六</span>
+      </div><div class="shrink-0 flex flex-col items-center justify-center border-r border-outline-variant/20 font-code-sm bg-surface-container/50 text-secondary" style="width: 60px;">
+        <span class="text-[10px] leading-tight opacity-75">9/20</span>
+        <span class="text-[11px] font-semibold">周日</span>
+      </div><div class="shrink-0 flex flex-col items-center justify-center border-r border-outline-variant/20 font-code-sm text-on-surface" style="width: 60px;">
+        <span class="text-[10px] leading-tight opacity-75">9/21</span>
+        <span class="text-[11px] font-semibold">周一</span>
+      </div><div class="shrink-0 flex flex-col items-center justify-center border-r border-outline-variant/20 font-code-sm text-on-surface" style="width: 60px;">
+        <span class="text-[10px] leading-tight opacity-75">9/22</span>
+        <span class="text-[11px] font-semibold">周二</span>
+      </div><div class="shrink-0 flex flex-col items-center justify-center border-r border-outline-variant/20 font-code-sm text-on-surface" style="width: 60px;">
+        <span class="text-[10px] leading-tight opacity-75">9/23</span>
+        <span class="text-[11px] font-semibold">周三</span>
+      </div><div class="shrink-0 flex flex-col items-center justify-center border-r border-outline-variant/20 font-code-sm text-on-surface" style="width: 60px;">
+        <span class="text-[10px] leading-tight opacity-75">9/24</span>
+        <span class="text-[11px] font-semibold">周四</span>
+      </div><div class="shrink-0 flex flex-col items-center justify-center border-r border-outline-variant/20 font-code-sm text-on-surface" style="width: 60px;">
+        <span class="text-[10px] leading-tight opacity-75">9/25</span>
+        <span class="text-[11px] font-semibold">周五</span>
+      </div><div class="shrink-0 flex flex-col items-center justify-center border-r border-outline-variant/20 font-code-sm bg-surface-container/50 text-secondary" style="width: 60px;">
+        <span class="text-[10px] leading-tight opacity-75">9/26</span>
+        <span class="text-[11px] font-semibold">周六</span>
+      </div><div class="shrink-0 flex flex-col items-center justify-center border-r border-outline-variant/20 font-code-sm bg-surface-container/50 text-secondary" style="width: 60px;">
+        <span class="text-[10px] leading-tight opacity-75">9/27</span>
+        <span class="text-[11px] font-semibold">周日</span>
+      </div></div>
+<!-- Vertical Grid Overlay Background (Columns & Weekend Tint) -->
+<div class="absolute inset-0 top-12 z-0 flex pointer-events-none" id="grid-columns-bg"><div class="shrink-0 h-full border-r border-outline-variant/15 " style="width: 60px;"></div><div class="shrink-0 h-full border-r border-outline-variant/15 " style="width: 60px;"></div><div class="shrink-0 h-full border-r border-outline-variant/15 " style="width: 60px;"></div><div class="shrink-0 h-full border-r border-outline-variant/15 " style="width: 60px;"></div><div class="shrink-0 h-full border-r border-outline-variant/15 " style="width: 60px;"></div><div class="shrink-0 h-full border-r border-outline-variant/15 bg-surface-container-low/40" style="width: 60px;"></div><div class="shrink-0 h-full border-r border-outline-variant/15 bg-surface-container-low/40" style="width: 60px;"></div><div class="shrink-0 h-full border-r border-outline-variant/15 " style="width: 60px;"></div><div class="shrink-0 h-full border-r border-outline-variant/15 " style="width: 60px;"></div><div class="shrink-0 h-full border-r border-outline-variant/15 " style="width: 60px;"></div><div class="shrink-0 h-full border-r border-outline-variant/15 " style="width: 60px;"></div><div class="shrink-0 h-full border-r border-outline-variant/15 " style="width: 60px;"></div><div class="shrink-0 h-full border-r border-outline-variant/15 bg-surface-container-low/40" style="width: 60px;"></div><div class="shrink-0 h-full border-r border-outline-variant/15 bg-surface-container-low/40" style="width: 60px;"></div></div>
+<!-- Today Guide Marker Line & Pin (Z-Index 30) -->
+<div class="absolute top-0 bottom-0 pointer-events-none z-30 flex flex-col items-center" id="today-marker-container" style="display: flex; left: 194px; width: 32px;">
+<div class="bg-tertiary-container text-on-tertiary px-space-xs py-0.5 rounded shadow-sm text-[10px] font-code-sm font-bold flex items-center gap-0.5 tracking-tight -translate-y-1">
+<span class="">今天</span>
+<span id="today-label-text" class="">9/17</span>
+</div>
+<div class="w-[2px] bg-tertiary-container flex-1 shadow-[0_0_8px_rgba(0,125,87,0.4)]"></div>
+</div>
+<!-- SVG Dependencies Overlay Layer (Z-Index 10) -->
+<svg class="absolute inset-0 top-12 w-full h-full pointer-events-none z-10 overflow-visible" id="dependency-svg-layer">
+<defs>
+<!-- Normal Arrowhead Marker -->
+<marker id="arrow-normal" markerHeight="6" markerWidth="6" orient="auto-start-reverse" refX="7" refY="5" viewBox="0 0 10 10">
+<path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#004ac6"></path>
+</marker>
+<!-- Conflict Arrowhead Marker -->
+<marker id="arrow-conflict" markerHeight="7" markerWidth="7" orient="auto-start-reverse" refX="7" refY="5" viewBox="0 0 10 10">
+<path d="M 0 1 L 9 5 L 0 9 z" fill="#ba1a1a"></path>
+</marker>
+</defs>
+<g id="svg-paths-group"><path d="M 540 20 C 564 20, 564 40, 480 20 C 396 0, 396 20, 420 20" fill="none" stroke-width="2.5" stroke="#ba1a1a" stroke-dasharray="4,3" class="animate-pulse" marker-end="url(#arrow-conflict)"></path><foreignObject x="420" y="8" width="120" height="24">
+          <div xmlns="http://www.w3.org/1999/xhtml" class="flex items-center justify-center">
+            <span class="px-1.5 py-0.5 bg-error-container text-on-error-container text-[10px] font-label-sm font-bold rounded shadow-sm">
+              ⚠ 时间重叠
+            </span>
+          </div>
+        </foreignObject><path d="M 840 20 C 864 20, 864 40, 750 20 C 636 0, 636 20, 660 20" fill="none" stroke-width="2.5" stroke="#ba1a1a" stroke-dasharray="4,3" class="animate-pulse" marker-end="url(#arrow-conflict)"></path><foreignObject x="690" y="8" width="120" height="24">
+          <div xmlns="http://www.w3.org/1999/xhtml" class="flex items-center justify-center">
+            <span class="px-1.5 py-0.5 bg-error-container text-on-error-container text-[10px] font-label-sm font-bold rounded shadow-sm">
+              ⚠ 时间重叠
+            </span>
+          </div>
+        </foreignObject></g>
+</svg>
+<!-- Right Timeline Task Bars Rows (Z-Index 20) -->
+<div class="relative z-20 flex flex-col pt-0" id="right-gantt-rows"><div class="h-10 relative flex items-center border-b border-outline-variant/10" data-mother-id="M1" data-row-type="mother"><div id="bar-mother-M1" class="absolute h-5 rounded-md flex items-center px-space-xs text-[11px] font-code-sm font-semibold tracking-tight transition-all pointer-events-auto shadow-sm bg-primary-container/20 text-primary" title="总排期: 2026-09-17 至 2026-09-22 (含 6 天)" style="left: 180px; width: 360px;">
+          <div class="truncate flex items-center gap-space-2xs">
+            <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+            <span class="">09-17 – 09-22</span>
+          </div>
+        </div></div><div class="h-10 relative flex items-center border-b border-outline-variant/10" data-mother-id="M1" data-child-id="C101"><div id="bar-child-C101" class="absolute h-7 rounded-lg shadow-sm flex items-center justify-between px-space-xs text-on-primary font-label-md text-label-md cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group" title="体验模板设计 (2026-09-17 至 2026-09-20, 共4天)" style="background-color: rgb(37, 99, 235); left: 180px; width: 240px;">
+            <span class="truncate pr-1 text-[11px] font-medium pointer-events-none">体验模板设计</span>
+            <span class="text-[10px] font-code-sm opacity-90 pointer-events-none bg-black/20 px-1 rounded">4天</span>
+          </div></div><div class="h-10 relative flex items-center border-b border-outline-variant/10" data-mother-id="M1" data-child-id="C102"><div id="bar-child-C102" class="absolute h-7 rounded-lg shadow-sm flex items-center justify-between px-space-xs text-on-primary font-label-md text-label-md cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group" title="策略开发 (2026-09-21 至 2026-09-22, 共2天)" style="background-color: rgb(37, 99, 235); left: 420px; width: 120px;">
+            <span class="truncate pr-1 text-[11px] font-medium pointer-events-none">策略开发</span>
+            <span class="text-[10px] font-code-sm opacity-90 pointer-events-none bg-black/20 px-1 rounded">2天</span>
+          </div></div><div class="h-10 relative flex items-center border-b border-outline-variant/10" data-mother-id="M1" data-child-id="C103"><div id="bar-child-C103" class="absolute h-7 rounded-lg shadow-sm flex items-center justify-between px-space-xs text-on-primary font-label-md text-label-md cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group" title="冒烟测试 (2026-09-22 至 2026-09-22, 共1天)" style="background-color: rgb(0, 125, 87); left: 480px; width: 60px;">
+            <span class="truncate pr-1 text-[11px] font-medium pointer-events-none">冒烟测试</span>
+            <span class="text-[10px] font-code-sm opacity-90 pointer-events-none bg-black/20 px-1 rounded">1天</span>
+          </div></div><div class="h-10 relative flex items-center border-b border-outline-variant/10" data-mother-id="M2" data-row-type="mother"><div id="bar-mother-M2" class="absolute h-5 rounded-md flex items-center px-space-xs text-[11px] font-code-sm font-semibold tracking-tight transition-all pointer-events-auto shadow-sm bg-error-container text-on-error-container" title="总排期: 2026-09-21 至 2026-09-27 (含 7 天)" style="left: 420px; width: 420px;">
+          <div class="truncate flex items-center gap-space-2xs">
+            <span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+            <span class="">09-21 – 09-27</span>
+          </div>
+        </div></div><div class="h-10 relative flex items-center border-b border-outline-variant/10" data-mother-id="M2" data-child-id="C201"><div id="bar-child-C201" class="absolute h-7 rounded-lg shadow-sm flex items-center justify-between px-space-xs text-on-primary font-label-md text-label-md cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group" title="规则引擎重构 (2026-09-21 至 2026-09-24, 共4天)" style="background-color: rgb(186, 26, 26); left: 420px; width: 240px;">
+            <span class="truncate pr-1 text-[11px] font-medium pointer-events-none">规则引擎重构</span>
+            <span class="text-[10px] font-code-sm opacity-90 pointer-events-none bg-black/20 px-1 rounded">4天</span>
+          </div></div><div class="h-10 relative flex items-center border-b border-outline-variant/10" data-mother-id="M2" data-child-id="C202"><div id="bar-child-C202" class="absolute h-7 rounded-lg shadow-sm flex items-center justify-between px-space-xs text-on-primary font-label-md text-label-md cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group" title="灰度放量测试 (2026-09-25 至 2026-09-27, 共3天)" style="background-color: rgb(37, 99, 235); left: 660px; width: 180px;">
+            <span class="truncate pr-1 text-[11px] font-medium pointer-events-none">灰度放量测试</span>
+            <span class="text-[10px] font-code-sm opacity-90 pointer-events-none bg-black/20 px-1 rounded">3天</span>
+          </div></div><div class="h-10 relative flex items-center border-b border-outline-variant/10" data-mother-id="M3" data-row-type="mother"><div id="bar-mother-M3" class="absolute h-5 rounded-md flex items-center px-space-xs text-[11px] font-code-sm font-semibold tracking-tight transition-all pointer-events-auto shadow-sm bg-error-container text-on-error-container" title="总排期: 2026-09-25 至 2026-09-29 (含 5 天)" style="left: 660px; width: 300px;">
+          <div class="truncate flex items-center gap-space-2xs">
+            <span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+            <span class="">09-25 – 09-29</span>
+          </div>
+        </div></div><div class="h-10 relative flex items-center border-b border-outline-variant/10" data-mother-id="M3" data-child-id="C301"><div id="bar-child-C301" class="absolute h-7 rounded-lg shadow-sm flex items-center justify-between px-space-xs text-on-primary font-label-md text-label-md cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group" title="成长值接口改造 (2026-09-25 至 2026-09-26, 共2天)" style="background-color: rgb(37, 99, 235); left: 660px; width: 120px;">
+            <span class="truncate pr-1 text-[11px] font-medium pointer-events-none">成长值接口改造</span>
+            <span class="text-[10px] font-code-sm opacity-90 pointer-events-none bg-black/20 px-1 rounded">2天</span>
+          </div></div><div class="h-10 relative flex items-center border-b border-outline-variant/10" data-mother-id="M3" data-child-id="C302"><div id="bar-child-C302" class="absolute h-7 rounded-lg shadow-sm flex items-center justify-between px-space-xs text-on-primary font-label-md text-label-md cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group" title="周任务下发联调 (2026-09-27 至 2026-09-29, 共3天)" style="background-color: rgb(37, 99, 235); left: 780px; width: 180px;">
+            <span class="truncate pr-1 text-[11px] font-medium pointer-events-none">周任务下发联调</span>
+            <span class="text-[10px] font-code-sm opacity-90 pointer-events-none bg-black/20 px-1 rounded">3天</span>
+          </div></div><div class="h-10 relative flex items-center border-b border-outline-variant/10" data-mother-id="M4" data-row-type="mother"><div id="bar-mother-M4" class="absolute h-5 rounded-md flex items-center px-space-xs text-[11px] font-code-sm font-semibold tracking-tight transition-all pointer-events-auto shadow-sm bg-primary-container/20 text-primary" title="总排期: 2026-09-15 至 2026-09-23 (含 9 天)" style="left: 60px; width: 540px;">
+          <div class="truncate flex items-center gap-space-2xs">
+            <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+            <span class="">09-15 – 09-23</span>
+          </div>
+        </div></div><div class="h-10 relative flex items-center border-b border-outline-variant/10" data-mother-id="M4" data-child-id="C401"><div id="bar-child-C401" class="absolute h-7 rounded-lg shadow-sm flex items-center justify-between px-space-xs text-on-primary font-label-md text-label-md cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group" title="上报协议定义 (2026-09-15 至 2026-09-18, 共4天)" style="background-color: rgb(86, 94, 116); left: 60px; width: 240px;">
+            <span class="truncate pr-1 text-[11px] font-medium pointer-events-none">上报协议定义</span>
+            <span class="text-[10px] font-code-sm opacity-90 pointer-events-none bg-black/20 px-1 rounded">4天</span>
+          </div></div><div class="h-10 relative flex items-center border-b border-outline-variant/10" data-mother-id="M4" data-child-id="C402"><div id="bar-child-C402" class="absolute h-7 rounded-lg shadow-sm flex items-center justify-between px-space-xs text-on-primary font-label-md text-label-md cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group" title="SDK埋点注入 (2026-09-19 至 2026-09-23, 共5天)" style="background-color: rgb(86, 94, 116); left: 300px; width: 300px;">
+            <span class="truncate pr-1 text-[11px] font-medium pointer-events-none">SDK埋点注入</span>
+            <span class="text-[10px] font-code-sm opacity-90 pointer-events-none bg-black/20 px-1 rounded">5天</span>
+          </div></div></div>
+</div>
+</div>
+</div>
+<!-- TOAST NOTIFICATION FLOATER -->
+<div class="fixed bottom-6 right-6 z-50 transform translate-y-16 opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-space-sm px-space-md py-space-sm rounded-xl bg-inverse-surface text-inverse-on-surface shadow-xl font-label-md text-label-md" id="toast-message">
+<span class="material-symbols-outlined text-[18px] text-tertiary-fixed" id="toast-icon">check_circle</span>
+<span id="toast-text" class="">计划已成功更新</span>
+</div>
+<!-- MODAL 1: EDIT CHILD TASK DATES -->
+<div class="fixed inset-0 bg-inverse-surface/40 backdrop-blur-[2px] z-50 hidden flex items-center justify-center p-space-md" id="modal-task-edit">
+<div class="bg-surface-container-lowest rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+<div class="p-space-md bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[20px]">date_range</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">调整子任务排期</h3>
+</div>
+<button class="btn-close-modal p-space-xs text-secondary hover:text-on-surface rounded-lg" type="button">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<form class="p-space-lg flex flex-col gap-space-md" id="form-edit-task">
+<input id="edit-mother-id" type="hidden">
+<input id="edit-child-id" type="hidden">
+<div>
+<label class="block font-label-md text-label-md text-secondary mb-space-2xs">子任务名称</label>
+<input class="w-full px-space-sm py-space-xs rounded-lg bg-surface font-body-md text-on-surface focus:outline-none focus:bg-surface-container-lowest shadow-sm" id="edit-task-title" required="" type="text">
+</div>
+<div class="grid grid-cols-2 gap-space-md">
+<div>
+<label class="block font-label-md text-label-md text-secondary mb-space-2xs">开始日期</label>
+<input class="w-full px-space-sm py-space-xs rounded-lg bg-surface font-code-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest shadow-sm" id="edit-task-start" required="" type="date">
+</div>
+<div>
+<label class="block font-label-md text-label-md text-secondary mb-space-2xs">结束日期 (含)</label>
+<input class="w-full px-space-sm py-space-xs rounded-lg bg-surface font-code-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest shadow-sm" id="edit-task-end" required="" type="date">
+</div>
+</div>
+<div class="hidden text-error font-label-sm text-label-sm flex items-center gap-space-2xs" id="edit-date-error">
+<span class="material-symbols-outlined text-[14px]">error</span>
+<span class="">结束日期不能早于开始日期</span>
+</div>
+<div class="p-space-sm bg-surface-container rounded-lg flex items-center justify-between text-secondary font-label-sm text-label-sm">
+<span class="">总持续天数:</span>
+<span class="font-semibold text-primary" id="edit-calc-duration">1 天</span>
+</div>
+<div class="flex items-center justify-end gap-space-sm pt-space-xs">
+<button class="btn-close-modal px-space-md py-space-xs rounded-lg text-secondary hover:bg-surface-container-low font-label-md text-label-md" type="button">取消</button>
+<button class="px-space-md py-space-xs rounded-lg bg-primary text-on-primary font-label-md text-label-md font-medium hover:bg-primary-container shadow-sm" type="submit">保存排期变更</button>
+</div>
+</form>
+</div>
+</div>
+<!-- MODAL 2: ADD NEW CHILD TASK -->
+<div class="fixed inset-0 bg-inverse-surface/40 backdrop-blur-[2px] z-50 hidden flex items-center justify-center p-space-md" id="modal-add-child">
+<div class="bg-surface-container-lowest rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+<div class="p-space-md bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[20px]">add_task</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">添加新子任务</h3>
+</div>
+<button class="btn-close-modal p-space-xs text-secondary hover:text-on-surface rounded-lg" type="button">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<form class="p-space-lg flex flex-col gap-space-md" id="form-add-child">
+<input id="add-child-mother-id" type="hidden">
+<div>
+<label class="block font-label-md text-label-md text-secondary mb-space-2xs">所属母任务</label>
+<input class="w-full px-space-sm py-space-xs rounded-lg bg-surface-container font-body-md text-secondary cursor-not-allowed" id="add-child-mother-name" readonly="" type="text">
+</div>
+<div>
+<label class="block font-label-md text-label-md text-secondary mb-space-2xs">子任务标题</label>
+<input class="w-full px-space-sm py-space-xs rounded-lg bg-surface font-body-md text-on-surface focus:outline-none focus:bg-surface-container-lowest shadow-sm" id="add-child-title" placeholder="如：接口定义、用例编写、联调验证..." required="" type="text">
+</div>
+<div class="grid grid-cols-2 gap-space-md">
+<div>
+<label class="block font-label-md text-label-md text-secondary mb-space-2xs">开始日期</label>
+<input class="w-full px-space-sm py-space-xs rounded-lg bg-surface font-code-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest shadow-sm" id="add-child-start" required="" type="date">
+</div>
+<div>
+<label class="block font-label-md text-label-md text-secondary mb-space-2xs">结束日期</label>
+<input class="w-full px-space-sm py-space-xs rounded-lg bg-surface font-code-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest shadow-sm" id="add-child-end" required="" type="date">
+</div>
+</div>
+<div class="flex items-center justify-end gap-space-sm pt-space-xs">
+<button class="btn-close-modal px-space-md py-space-xs rounded-lg text-secondary hover:bg-surface-container-low font-label-md text-label-md" type="button">取消</button>
+<button class="px-space-md py-space-xs rounded-lg bg-primary text-on-primary font-label-md text-label-md font-medium hover:bg-primary-container shadow-sm" type="submit">确认添加并排期</button>
+</div>
+</form>
+</div>
+</div>
+<!-- MODAL 3: CONFIGURE DEPENDENCY -->
+<div class="fixed inset-0 bg-inverse-surface/40 backdrop-blur-[2px] z-50 hidden flex items-center justify-center p-space-md" id="modal-dependency">
+<div class="bg-surface-container-lowest rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+<div class="p-space-md bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[20px]">hub</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">设置前置依赖</h3>
+</div>
+<button class="btn-close-modal p-space-xs text-secondary hover:text-on-surface rounded-lg" type="button">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<form class="p-space-lg flex flex-col gap-space-md" id="form-dependency">
+<input id="dep-target-mother-id" type="hidden">
+<div>
+<label class="block font-label-md text-label-md text-secondary mb-space-2xs">当前母任务 (后置)</label>
+<div class="px-space-sm py-space-xs rounded-lg bg-surface-container font-headline-sm text-headline-sm text-on-surface" id="dep-target-mother-title"></div>
+</div>
+<div>
+<label class="block font-label-md text-label-md text-secondary mb-space-2xs">选择必须先完成的母任务 (前置依赖项)</label>
+<select class="w-full px-space-sm py-space-xs rounded-lg bg-surface font-body-md text-on-surface focus:outline-none focus:bg-surface-container-lowest shadow-sm" id="dep-source-select">
+<!-- Populated dynamically -->
+</select>
+</div>
+<div class="hidden p-space-sm bg-error-container text-on-error-container rounded-lg font-label-sm text-label-sm flex items-center gap-space-2xs" id="dep-error-banner">
+<span class="material-symbols-outlined text-[16px]">block</span>
+<span id="dep-error-text" class="">检测到循环依赖环路，无法关联！</span>
+</div>
+<div class="p-space-sm bg-surface-container-low rounded-lg text-secondary font-label-sm text-label-sm">
+<div class="flex items-center gap-space-xs text-on-surface font-medium mb-1">
+<span class="material-symbols-outlined text-[14px] text-tertiary">check</span>
+<span class="">冲突判定逻辑</span>
+</div>
+<p class="">当前任务的开始时间若早于或等于所选前置任务的结束时间，看板将标红警告并实时高亮冲突折线。</p>
+</div>
+<div class="flex items-center justify-between pt-space-xs">
+<button class="text-error hover:bg-error-container/40 px-space-sm py-space-xs rounded-lg font-label-md text-label-md transition-colors" id="btn-dep-remove" type="button">
+            解除依赖
+          </button>
+<div class="flex items-center gap-space-sm">
+<button class="btn-close-modal px-space-md py-space-xs rounded-lg text-secondary hover:bg-surface-container-low font-label-md text-label-md" type="button">取消</button>
+<button class="px-space-md py-space-xs rounded-lg bg-primary text-on-primary font-label-md text-label-md font-medium hover:bg-primary-container shadow-sm" type="submit">确定设置</button>
+</div>
+</div>
+</form>
+</div>
+</div>
+<!-- MODAL 4: CREATE MOTHER TASK -->
+<div class="fixed inset-0 bg-inverse-surface/40 backdrop-blur-[2px] z-50 hidden flex items-center justify-center p-space-md" id="modal-create-mother">
+<div class="bg-surface-container-lowest rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+<div class="p-space-md bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[20px]">post_add</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">创建新母任务</h3>
+</div>
+<button class="btn-close-modal p-space-xs text-secondary hover:text-on-surface rounded-lg" type="button">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<form class="p-space-lg flex flex-col gap-space-md" id="form-create-mother">
+<div>
+<label class="block font-label-md text-label-md text-secondary mb-space-2xs">母任务标题</label>
+<input class="w-full px-space-sm py-space-xs rounded-lg bg-surface font-body-md text-on-surface focus:outline-none focus:bg-surface-container-lowest shadow-sm" id="new-mother-title" placeholder="如：第三期结算重构、风控模型联调..." required="" type="text">
+</div>
+<div>
+<label class="block font-label-md text-label-md text-secondary mb-space-2xs">初始子任务名称 (选填)</label>
+<input class="w-full px-space-sm py-space-xs rounded-lg bg-surface font-body-md text-on-surface focus:outline-none focus:bg-surface-container-lowest shadow-sm" id="new-mother-first-child" placeholder="如：系统原型与需求评审" type="text">
+</div>
+<div class="flex items-center justify-end gap-space-sm pt-space-xs">
+<button class="btn-close-modal px-space-md py-space-xs rounded-lg text-secondary hover:bg-surface-container-low font-label-md text-label-md" type="button">取消</button>
+<button class="px-space-md py-space-xs rounded-lg bg-primary text-on-primary font-label-md text-label-md font-medium hover:bg-primary-container shadow-sm" type="submit">创建并加入看板</button>
+</div>
+</form>
+</div>
+</div><!-- MODAL 5: EXPORT JSON MODAL -->
+<div class="fixed inset-0 bg-inverse-surface/40 backdrop-blur-[2px] z-50 hidden flex items-center justify-center p-space-md" id="modal-export-json">
+  <div class="bg-surface-container-lowest rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div class="p-space-md bg-surface-container-low flex items-center justify-between">
+      <div class="flex items-center gap-space-xs">
+        <span class="material-symbols-outlined text-primary text-[20px]">ios_share</span>
+        <h3 class="font-headline-sm text-headline-sm text-on-surface">导出规划数据 (JSON)</h3>
+      </div>
+      <button class="btn-close-modal p-space-xs text-secondary hover:text-on-surface rounded-lg" type="button">
+        <span class="material-symbols-outlined text-[18px]">close</span>
+      </button>
+    </div>
+    <form class="p-space-lg flex flex-col gap-space-md" id="form-export-json">
+      <div>
+        <label class="block font-label-md text-label-md text-secondary mb-space-2xs">导出文件名</label>
+        <input class="w-full px-space-sm py-space-xs rounded-lg bg-surface font-code-sm text-on-surface focus:outline-none focus:bg-surface-container-lowest shadow-sm" id="export-file-name" value="schedule-plan-202609.json" required="" type="text">
+      </div>
+      <div class="flex flex-col gap-space-xs p-space-sm bg-surface-container-low rounded-xl text-body-sm font-body-sm">
+        <span class="font-label-sm text-label-sm text-on-surface font-medium">导出数据摘要统计</span>
+        <div class="flex items-center justify-between text-secondary">
+          <span class="">包含母任务与工作包:</span>
+          <span class="font-code-sm font-semibold text-primary" id="export-stat-mothers">4 个</span>
+        </div>
+        <div class="flex items-center justify-between text-secondary">
+          <span class="">包含已细分子任务:</span>
+          <span class="font-code-sm font-semibold text-primary" id="export-stat-children">9 个</span>
+        </div>
+        <div class="flex items-center justify-between text-secondary">
+          <span class="">跨任务依赖关联:</span>
+          <span class="font-code-sm font-semibold text-primary" id="export-stat-deps">2 条</span>
+        </div>
+      </div>
+      <div class="flex flex-col gap-space-2xs">
+        <span class="font-label-md text-label-md text-secondary">导出配置项</span>
+        <label class="flex items-center gap-space-xs cursor-pointer select-none text-body-sm">
+          <input checked="" id="export-opt-indent" class="w-3.5 h-3.5 accent-primary rounded cursor-pointer" type="checkbox">
+          <span class="text-on-surface-variant">包含格式化缩进 (便于人类阅读与版本比对)</span>
+        </label>
+        <label class="flex items-center gap-space-xs cursor-pointer select-none text-body-sm">
+          <input checked="" id="export-opt-meta" class="w-3.5 h-3.5 accent-primary rounded cursor-pointer" type="checkbox">
+          <span class="text-on-surface-variant">包含当前看板时间轴视图范围与状态元数据</span>
+        </label>
+      </div>
+      <div class="flex items-center justify-end gap-space-sm pt-space-xs">
+        <button class="btn-close-modal px-space-md py-space-xs rounded-lg text-secondary hover:bg-surface-container-low font-label-md text-label-md" type="button">取消</button>
+        <button class="flex items-center gap-space-xs px-space-md py-space-xs rounded-lg bg-primary text-on-primary font-label-md text-label-md font-medium hover:bg-primary-container shadow-sm" type="submit">
+          <span class="material-symbols-outlined text-[16px]">download</span>
+          <span class="">确认导出并下载</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL 6: IMPORT JSON MODAL -->
+<div class="fixed inset-0 bg-inverse-surface/40 backdrop-blur-[2px] z-50 hidden flex items-center justify-center p-space-md" id="modal-import-json">
+  <div class="bg-surface-container-lowest rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div class="p-space-md bg-surface-container-low flex items-center justify-between">
+      <div class="flex items-center gap-space-xs">
+        <span class="material-symbols-outlined text-primary text-[20px]">drive_folder_upload</span>
+        <h3 class="font-headline-sm text-headline-sm text-on-surface">导入 JSON 规划数据</h3>
+      </div>
+      <button class="btn-close-modal p-space-xs text-secondary hover:text-on-surface rounded-lg" type="button">
+        <span class="material-symbols-outlined text-[18px]">close</span>
+      </button>
+    </div>
+    <div class="p-space-lg flex flex-col gap-space-md">
+      <!-- Drop / Pick Zone -->
+      <div id="import-drop-zone" class="border-2 border-dashed border-outline-variant/60 hover:border-primary rounded-xl p-space-lg flex flex-col items-center justify-center text-center cursor-pointer bg-surface hover:bg-surface-container-low/50 transition-all">
+        <span class="material-symbols-outlined text-[32px] text-primary mb-1">upload_file</span>
+        <div class="font-label-md text-label-md font-medium text-on-surface" id="import-drop-text">点击选择或将 JSON 文件拖拽至此</div>
+        <div class="font-body-sm text-body-sm text-secondary mt-1">支持 standard Gantt WBS (.json) 格式文件</div>
+      </div>
+      <!-- File verification preview badge -->
+      <div id="import-preview-box" class="hidden p-space-sm bg-surface-container rounded-xl flex flex-col gap-space-2xs text-body-sm">
+        <div class="flex items-center justify-between">
+          <span class="font-label-sm text-label-sm font-semibold text-tertiary flex items-center gap-space-2xs">
+            <span class="material-symbols-outlined text-[14px]">verified</span>
+            <span class="">文件校验解析成功</span>
+          </span>
+          <span class="font-code-sm text-[11px] text-secondary" id="import-file-name-label">plan.json</span>
+        </div>
+        <div class="text-on-surface-variant font-code-sm text-[11px]" id="import-summary-label">包含 3 个母任务，8 个子任务，1 条依赖</div>
+      </div>
+      <!-- Import mode select -->
+      <div>
+        <label class="block font-label-md text-label-md text-secondary mb-space-2xs">导入模式</label>
+        <div class="grid grid-cols-2 gap-space-sm">
+          <label class="flex items-center gap-space-xs p-space-sm rounded-lg bg-surface border border-outline-variant/30 cursor-pointer select-none">
+            <input type="radio" name="import-mode" value="overwrite" checked="" class="accent-primary">
+            <span class="font-label-md text-label-md text-on-surface">全量覆盖当前</span>
+          </label>
+          <label class="flex items-center gap-space-xs p-space-sm rounded-lg bg-surface border border-outline-variant/30 cursor-pointer select-none">
+            <input type="radio" name="import-mode" value="append" class="accent-primary">
+            <span class="font-label-md text-label-md text-on-surface">合并追加到看板</span>
+          </label>
+        </div>
+      </div>
+      <!-- Template download helper -->
+      <div class="flex items-center justify-between text-body-sm pt-space-2xs">
+        <button type="button" id="btn-download-sample" class="text-primary hover:underline flex items-center gap-space-2xs font-label-sm text-label-sm">
+          <span class="material-symbols-outlined text-[14px]">download_for_offline</span>
+          <span class="">下载示例 JSON 模板文件</span>
+        </button>
+      </div>
+      <div class="flex items-center justify-end gap-space-sm pt-space-xs border-t border-outline-variant/20">
+        <button class="btn-close-modal px-space-md py-space-xs rounded-lg text-secondary hover:bg-surface-container-low font-label-md text-label-md" type="button">取消</button>
+        <button id="btn-confirm-import" disabled="" class="flex items-center gap-space-xs px-space-md py-space-xs rounded-lg bg-primary text-on-primary font-label-md text-label-md font-medium hover:bg-primary-container shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" type="button">
+          <span class="material-symbols-outlined text-[16px]">check</span>
+          <span class="">确认导入并刷新看板</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<!-- JAVASCRIPT LOGIC & ENGINE -->
+<script>
+(() => {
+  // Preset standard baseline scenario (Demonstrating all specification features)
+  const STATE = {
+    // 2026-09-17 is Today
+    todayStr: "2026-09-17",
+    viewMode: "biweek", // 'week' (7), 'biweek' (14), 'month' (30)
+    startDate: new Date("2026-09-14T00:00:00"),
+    showDependencies: true,
+    dayColumnWidth: 60, // Width in px for each day tick
+    rowHeight: 40, // Height in px for synchronised alignment
+    collapsedMothers: {}, // motherId -> boolean
+
+    // Dataset matching specification document
+    motherTasks: [
+      {
+        id: "M1",
+        title: "Slots第一期策略",
+        dependsOn: null,
+        children: [
+          { id: "C101", title: "体验模板设计", start: "2026-09-17", end: "2026-09-20", color: "#2563eb" },
+          { id: "C102", title: "策略开发", start: "2026-09-21", end: "2026-09-22", color: "#2563eb" },
+          { id: "C103", title: "冒烟测试", start: "2026-09-22", end: "2026-09-22", color: "#007d57" }
+        ]
+      },
+      {
+        id: "M2",
+        title: "Slots第二期策略",
+        dependsOn: "M1", // Intentional conflict: starts 9/21 while M1 ends 9/22
+        children: [
+          { id: "C201", title: "规则引擎重构", start: "2026-09-21", end: "2026-09-24", color: "#ba1a1a" },
+          { id: "C202", title: "灰度放量测试", start: "2026-09-25", end: "2026-09-27", color: "#2563eb" }
+        ]
+      },
+      {
+        id: "M3",
+        title: "VIP成长与周任务系统",
+        dependsOn: "M2",
+        children: [
+          { id: "C301", title: "成长值接口改造", start: "2026-09-25", end: "2026-09-26", color: "#2563eb" },
+          { id: "C302", title: "周任务下发联调", start: "2026-09-27", end: "2026-09-29", color: "#2563eb" }
+        ]
+      },
+      {
+        id: "M4",
+        title: "埋点开发及底层上报",
+        dependsOn: null,
+        children: [
+          { id: "C401", title: "上报协议定义", start: "2026-09-15", end: "2026-09-18", color: "#565e74" },
+          { id: "C402", title: "SDK埋点注入", start: "2026-09-19", end: "2026-09-23", color: "#565e74" }
+        ]
+      }
+    ]
+  };
+
+  // Helper date tools
+  function formatDate(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function addDays(d, days) {
+    const res = new Date(d);
+    res.setDate(res.getDate() + days);
+    return res;
+  }
+
+  function parseDate(str) {
+    const [y, m, d] = str.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  function diffDays(startStr, endStr) {
+    const s = parseDate(startStr);
+    const e = parseDate(endStr);
+    return Math.round((e - s) / (1000 * 60 * 60 * 24));
+  }
+
+  function getDayOfWeekStr(d) {
+    const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    return days[d.getDay()];
+  }
+
+  function getViewTotalDays() {
+    if (STATE.viewMode === 'week') return 7;
+    if (STATE.viewMode === 'biweek') return 14;
+    return 30;
+  }
+
+  function showToast(text, isError = false) {
+    const toast = document.getElementById('toast-message');
+    const icon = document.getElementById('toast-icon');
+    const msg = document.getElementById('toast-text');
+    icon.textContent = isError ? 'error' : 'check_circle';
+    icon.className = `material-symbols-outlined text-[18px] ${isError ? 'text-error' : 'text-tertiary-fixed'}`;
+    msg.textContent = text;
+    toast.classList.remove('translate-y-16', 'opacity-0');
+    toast.classList.add('translate-y-0', 'opacity-100');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => {
+      toast.classList.remove('translate-y-0', 'opacity-100');
+      toast.classList.add('translate-y-16', 'opacity-0');
+    }, 2800);
+  }
+
+  // Calculate Mother task span from its children
+  function computeMotherSpan(mother) {
+    if (!mother.children || mother.children.length === 0) return null;
+    let minStart = mother.children[0].start;
+    let maxEnd = mother.children[0].end;
+    for (const c of mother.children) {
+      if (c.start < minStart) minStart = c.start;
+      if (c.end > maxEnd) maxEnd = c.end;
+    }
+    return { start: minStart, end: maxEnd };
+  }
+
+  // Check conflicts for mother tasks: Child start <= Parent end -> CONFLICT
+  function evaluateConflicts() {
+    const conflicts = [];
+    for (const m of STATE.motherTasks) {
+      if (!m.dependsOn) continue;
+      const parent = STATE.motherTasks.find(item => item.id === m.dependsOn);
+      if (!parent) continue;
+
+      const parentSpan = computeMotherSpan(parent);
+      const curSpan = computeMotherSpan(m);
+      if (!parentSpan || !curSpan) continue;
+
+      // Conflict condition: Current task starts before or on the day parent finishes!
+      if (curSpan.start <= parentSpan.end) {
+        conflicts.push({
+          childMotherId: m.id,
+          parentMotherId: parent.id,
+          childStart: curSpan.start,
+          parentEnd: parentSpan.end,
+          overlapDays: diffDays(curSpan.start, parentSpan.end) + 1
+        });
+      }
+    }
+    return conflicts;
+  }
+
+  // Detect circular dependency
+  function createsCycle(fromId, toId) {
+    if (fromId === toId) return true;
+    let curr = toId;
+    const visited = new Set();
+    while (curr) {
+      if (visited.has(curr)) return true;
+      visited.add(curr);
+      const m = STATE.motherTasks.find(x => x.id === curr);
+      if (!m || !m.dependsOn) break;
+      if (m.dependsOn === fromId) return true;
+      curr = m.dependsOn;
+    }
+    return false;
+  }
+
+  // RENDER ENGINE
+  function renderAll() {
+    const totalDays = getViewTotalDays();
+    const startDate = STATE.startDate;
+    const endDate = addDays(startDate, totalDays - 1);
+
+    // Update Toolbar Date Range label
+    const fmt = (d) => `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+    document.getElementById('label-date-range').textContent = `${fmt(startDate)} – ${fmt(endDate)}`;
+
+    // Update conflict badge
+    const conflicts = evaluateConflicts();
+    const conflictPill = document.getElementById('conflict-pill');
+    const conflictText = document.getElementById('conflict-count-text');
+    if (conflicts.length > 0) {
+      conflictPill.classList.remove('hidden');
+      conflictText.textContent = `${conflicts.length} 个依赖冲突待关注`;
+    } else {
+      conflictPill.classList.add('hidden');
+    }
+
+    // Set timeline width
+    const totalWidthPx = totalDays * STATE.dayColumnWidth;
+    const timelineInner = document.getElementById('timeline-inner');
+    timelineInner.style.width = `${totalWidthPx}px`;
+
+    // 1. Render Header Axis & Background Columns
+    const headerAxis = document.getElementById('timeline-header-axis');
+    const bgColumns = document.getElementById('grid-columns-bg');
+    headerAxis.innerHTML = '';
+    bgColumns.innerHTML = '';
+
+    for (let i = 0; i < totalDays; i++) {
+      const cur = addDays(startDate, i);
+      const dateStr = formatDate(cur);
+      const isWeekend = cur.getDay() === 0 || cur.getDay() === 6;
+      const isToday = dateStr === STATE.todayStr;
+
+      // Header Column Cell
+      const th = document.createElement('div');
+      th.className = `shrink-0 flex flex-col items-center justify-center border-r border-outline-variant/20 font-code-sm ${
+        isToday ? 'bg-tertiary-fixed/30 text-on-tertiary-fixed font-bold' : isWeekend ? 'bg-surface-container/50 text-secondary' : 'text-on-surface'
+      }`;
+      th.style.width = `${STATE.dayColumnWidth}px`;
+      th.innerHTML = `
+        <span class="text-[10px] leading-tight opacity-75">${cur.getMonth() + 1}/${cur.getDate()}</span>
+        <span class="text-[11px] font-semibold">${getDayOfWeekStr(cur)}</span>
+      `;
+      headerAxis.appendChild(th);
+
+      // Background Column Slot
+      const bgCol = document.createElement('div');
+      bgCol.className = `shrink-0 h-full border-r border-outline-variant/15 ${isWeekend ? 'bg-surface-container-low/40' : ''}`;
+      bgCol.style.width = `${STATE.dayColumnWidth}px`;
+      bgColumns.appendChild(bgCol);
+    }
+
+    // 2. Position Today Marker
+    const todayMarker = document.getElementById('today-marker-container');
+    const todayIndex = diffDays(formatDate(startDate), STATE.todayStr);
+    if (todayIndex >= 0 && todayIndex < totalDays) {
+      todayMarker.style.display = 'flex';
+      todayMarker.style.left = `${todayIndex * STATE.dayColumnWidth + (STATE.dayColumnWidth / 2) - 16}px`;
+      todayMarker.style.width = '32px';
+      const todayDate = parseDate(STATE.todayStr);
+      document.getElementById('today-label-text').textContent = `${todayDate.getMonth()+1}/${todayDate.getDate()}`;
+    } else {
+      todayMarker.style.display = 'none';
+    }
+
+    // 3. Render Task Rows (Left tree & Right bars)
+    const leftContainer = document.getElementById('left-tree-rows');
+    const rightContainer = document.getElementById('right-gantt-rows');
+    leftContainer.innerHTML = '';
+    rightContainer.innerHTML = '';
+
+    let totalChildCount = 0;
+
+    STATE.motherTasks.forEach((mother, mIdx) => {
+      const isCollapsed = !!STATE.collapsedMothers[mother.id];
+      const motherSpan = computeMotherSpan(mother);
+      const isConflicted = conflicts.some(c => c.childMotherId === mother.id);
+      const childCount = mother.children ? mother.children.length : 0;
+      totalChildCount += childCount;
+
+      // --- Left Mother Task Row ---
+      const leftMotherRow = document.createElement('div');
+      leftMotherRow.className = `h-10 px-space-md flex items-center justify-between bg-surface-container-low/60 hover:bg-surface-container transition-colors group`;
+      leftMotherRow.innerHTML = `
+        <div class="flex items-center gap-space-xs min-w-0 flex-1">
+          <button data-toggle-mother="${mother.id}" class="p-space-2xs text-secondary hover:text-on-surface transition-transform duration-150 ${isCollapsed ? '-rotate-90' : ''}" title="折叠/展开">
+            <span class="material-symbols-outlined text-[16px]">expand_more</span>
+          </button>
+          <span class="material-symbols-outlined text-[16px] text-primary">folder</span>
+          <span class="font-headline-sm text-[13px] font-semibold text-on-surface truncate" title="${mother.title}">${mother.title}</span>
+          ${isConflicted ? `<span class="material-symbols-outlined text-[15px] text-error" title="存在排期前置依赖冲突！">warning</span>` : ''}
+          ${mother.dependsOn ? `<span class="px-space-xs py-0.5 rounded bg-primary-fixed text-on-primary-fixed font-code-sm text-[10px]">依赖</span>` : ''}
+        </div>
+        <div class="flex items-center gap-space-2xs opacity-80 group-hover:opacity-100 shrink-0">
+          <button data-add-dep="${mother.id}" class="px-space-xs py-0.5 rounded text-[11px] font-label-sm bg-surface-container-lowest hover:bg-primary hover:text-on-primary text-secondary shadow-sm transition-all" title="配置依赖">
+            + 依赖
+          </button>
+          <button data-add-child="${mother.id}" class="p-0.5 rounded hover:bg-primary hover:text-on-primary text-secondary transition-all" title="添加子任务">
+            <span class="material-symbols-outlined text-[16px]">add</span>
+          </button>
+        </div>
+      `;
+      leftContainer.appendChild(leftMotherRow);
+
+      // --- Right Mother Task Span Row ---
+      const rightMotherRow = document.createElement('div');
+      rightMotherRow.className = `h-10 relative flex items-center border-b border-outline-variant/10`;
+      rightMotherRow.dataset.motherId = mother.id;
+      rightMotherRow.dataset.rowType = "mother";
+
+      // Double-click empty timeline cell on mother row opens quick new child task with clicked date prefilled!
+      rightMotherRow.addEventListener('dblclick', (e) => {
+        const rect = rightMotherRow.getBoundingClientRect();
+        const offsetX = e.clientX - rect.left;
+        const dayIdx = Math.floor(offsetX / STATE.dayColumnWidth);
+        const targetDate = formatDate(addDays(startDate, Math.max(0, Math.min(totalDays - 1, dayIdx))));
+        openAddChildModal(mother.id, targetDate);
+      });
+
+      if (motherSpan) {
+        // Position Mother aggregate span
+        const startDiff = diffDays(formatDate(startDate), motherSpan.start);
+        const spanDays = diffDays(motherSpan.start, motherSpan.end) + 1;
+        const leftPx = startDiff * STATE.dayColumnWidth;
+        const widthPx = Math.max(spanDays * STATE.dayColumnWidth, 12);
+
+        const motherBar = document.createElement('div');
+        motherBar.id = `bar-mother-${mother.id}`;
+        motherBar.className = `absolute h-5 rounded-md flex items-center px-space-xs text-[11px] font-code-sm font-semibold tracking-tight transition-all pointer-events-auto shadow-sm ${
+          isConflicted ? 'bg-error-container text-on-error-container' : 'bg-primary-container/20 text-primary'
+        }`;
+        motherBar.style.left = `${leftPx}px`;
+        motherBar.style.width = `${widthPx}px`;
+        motherBar.title = `总排期: ${motherSpan.start} 至 ${motherSpan.end} (含 ${spanDays} 天)`;
+        motherBar.innerHTML = `
+          <div class="truncate flex items-center gap-space-2xs">
+            <span class="w-1.5 h-1.5 rounded-full ${isConflicted ? 'bg-error' : 'bg-primary'}"></span>
+            <span>${motherSpan.start.slice(5)} – ${motherSpan.end.slice(5)}</span>
+          </div>
+        `;
+        rightMotherRow.appendChild(motherBar);
+      }
+      rightContainer.appendChild(rightMotherRow);
+
+      // --- Child Rows (Render if not collapsed) ---
+      if (!isCollapsed && mother.children) {
+        mother.children.forEach(child => {
+          // Left child row
+          const leftChildRow = document.createElement('div');
+          leftChildRow.className = `h-10 pl-8 pr-space-md flex items-center justify-between hover:bg-surface-container-low transition-colors border-b border-outline-variant/10`;
+          leftChildRow.innerHTML = `
+            <div class="flex items-center gap-space-xs min-w-0 flex-1">
+              <span class="material-symbols-outlined text-[14px] text-outline">subdirectory_arrow_right</span>
+              <span class="font-body-md text-on-surface truncate cursor-pointer hover:text-primary" title="点击编辑排期" data-edit-child="${mother.id},${child.id}">
+                ${child.title}
+              </span>
+            </div>
+            <span class="font-code-sm text-[11px] text-secondary font-medium shrink-0 bg-surface-container px-space-xs py-0.5 rounded">
+              ${child.start.slice(5)} - ${child.end.slice(5)}
+            </span>
+          `;
+          leftContainer.appendChild(leftChildRow);
+
+          // Right child timeline bar row
+          const rightChildRow = document.createElement('div');
+          rightChildRow.className = `h-10 relative flex items-center border-b border-outline-variant/10`;
+          rightChildRow.dataset.motherId = mother.id;
+          rightChildRow.dataset.childId = child.id;
+
+          const cStartDiff = diffDays(formatDate(startDate), child.start);
+          const cDuration = diffDays(child.start, child.end) + 1;
+          const cLeftPx = cStartDiff * STATE.dayColumnWidth;
+          const cWidthPx = Math.max(cDuration * STATE.dayColumnWidth, 18);
+
+          const childBar = document.createElement('div');
+          childBar.id = `bar-child-${child.id}`;
+          childBar.className = `absolute h-7 rounded-lg shadow-sm flex items-center justify-between px-space-xs text-on-primary font-label-md text-label-md cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group`;
+          childBar.style.backgroundColor = child.color || '#2563eb';
+          childBar.style.left = `${cLeftPx}px`;
+          childBar.style.width = `${cWidthPx}px`;
+          childBar.title = `${child.title} (${child.start} 至 ${child.end}, 共${cDuration}天)`;
+
+          childBar.innerHTML = `
+            <span class="truncate pr-1 text-[11px] font-medium pointer-events-none">${child.title}</span>
+            <span class="text-[10px] font-code-sm opacity-90 pointer-events-none bg-black/20 px-1 rounded">${cDuration}天</span>
+          `;
+
+          // Bind Drag & Drop on Child Bar
+          setupBarDrag(childBar, mother.id, child.id, cDuration);
+
+          // Click on Bar to open Edit Modal
+          childBar.addEventListener('click', (ev) => {
+            if (childBar._hasDragged) {
+              childBar._hasDragged = false;
+              return;
+            }
+            openEditTaskModal(mother.id, child.id);
+          });
+
+          rightChildRow.appendChild(childBar);
+          rightContainer.appendChild(rightChildRow);
+        });
+      }
+    });
+
+    document.getElementById('total-tasks-pill').textContent = `${STATE.motherTasks.length}母 / ${totalChildCount}子`;
+
+    // 4. Render Dependency SVG Curves
+    renderDependencyCurves(conflicts);
+  }
+
+  // RENDER SVG DEPENDENCY CURVES
+  function renderDependencyCurves(conflicts) {
+    const svgGroup = document.getElementById('svg-paths-group');
+    svgGroup.innerHTML = '';
+    if (!STATE.showDependencies) return;
+
+    const timelineContainer = document.getElementById('timeline-scroll-container');
+    const scrollLeft = timelineContainer.scrollLeft;
+
+    STATE.motherTasks.forEach(targetMother => {
+      if (!targetMother.dependsOn) return;
+      const srcMother = STATE.motherTasks.find(m => m.id === targetMother.dependsOn);
+      if (!srcMother) return;
+
+      const srcBar = document.getElementById(`bar-mother-${srcMother.id}`);
+      const tgtBar = document.getElementById(`bar-mother-${targetMother.id}`);
+      if (!srcBar || !tgtBar) return;
+
+      const isConflict = conflicts.some(c => c.childMotherId === targetMother.id && c.parentMotherId === srcMother.id);
+
+      // Compute coordinate origins within relative SVG
+      const srcRect = srcBar.getBoundingClientRect();
+      const tgtRect = tgtBar.getBoundingClientRect();
+      const containerRect = timelineContainer.getBoundingClientRect();
+
+      // Start: center-right edge of parent mother bar
+      const startX = (srcBar.offsetLeft + srcBar.offsetWidth);
+      const startY = srcBar.offsetTop + (srcBar.offsetHeight / 2) + 20;
+
+      // End: center-left edge of target mother bar
+      const endX = tgtBar.offsetLeft;
+      const endY = tgtBar.offsetTop + (tgtBar.offsetHeight / 2) + 20;
+
+      // Bezier curve calculations
+      const deltaX = endX - startX;
+      let pathD = '';
+      if (deltaX >= 20) {
+        // Smooth forward curve
+        const cp1x = startX + deltaX * 0.5;
+        const cp2x = startX + deltaX * 0.5;
+        pathD = `M ${startX} ${startY} C ${cp1x} ${startY}, ${cp2x} ${endY}, ${endX} ${endY}`;
+      } else {
+        // Backwards or overlap curve loop
+        const loopOut = startX + 24;
+        const loopIn = endX - 24;
+        pathD = `M ${startX} ${startY} C ${loopOut} ${startY}, ${loopOut} ${startY + 20}, ${(startX + endX)/2} ${(startY + endY)/2} C ${loopIn} ${endY - 20}, ${loopIn} ${endY}, ${endX} ${endY}`;
+      }
+
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", pathD);
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke-width", isConflict ? "2.5" : "1.75");
+      path.setAttribute("stroke", isConflict ? "#ba1a1a" : "#004ac6");
+      if (isConflict) {
+        path.setAttribute("stroke-dasharray", "4,3");
+        path.classList.add("animate-pulse");
+      }
+      path.setAttribute("marker-end", isConflict ? "url(#arrow-conflict)" : "url(#arrow-normal)");
+      svgGroup.appendChild(path);
+
+      // If conflict, place a floating badge at midpoint
+      if (isConflict) {
+        const midX = (startX + endX) / 2;
+        const midY = (startY + endY) / 2;
+        const fo = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+        fo.setAttribute("x", midX - 60);
+        fo.setAttribute("y", midY - 12);
+        fo.setAttribute("width", "120");
+        fo.setAttribute("height", "24");
+        fo.innerHTML = `
+          <div xmlns="http://www.w3.org/1999/xhtml" class="flex items-center justify-center">
+            <span class="px-1.5 py-0.5 bg-error-container text-on-error-container text-[10px] font-label-sm font-bold rounded shadow-sm">
+              ⚠ 时间重叠
+            </span>
+          </div>
+        `;
+        svgGroup.appendChild(fo);
+      }
+    });
+  }
+
+  // DRAG & DROP LOGIC WITH SNAP TO GRID
+  function setupBarDrag(barEl, motherId, childId, durationDays) {
+    let startX = 0;
+    let initialLeft = 0;
+    let isDragging = false;
+
+    barEl.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return; // Only left click
+      e.preventDefault();
+      e.stopPropagation();
+      startX = e.clientX;
+      initialLeft = parseFloat(barEl.style.left) || 0;
+      isDragging = false;
+      barEl._hasDragged = false;
+
+      function onMouseMove(ev) {
+        const dx = ev.clientX - startX;
+        if (Math.abs(dx) > 3) {
+          isDragging = true;
+          barEl._hasDragged = true;
+        }
+        if (isDragging) {
+          barEl.style.left = `${initialLeft + dx}px`;
+          barEl.style.opacity = '0.85';
+          barEl.style.zIndex = '40';
+        }
+      }
+
+      function onMouseUp(ev) {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+
+        if (!isDragging) return;
+
+        // Snap to nearest day column
+        const currentLeft = parseFloat(barEl.style.left) || 0;
+        const dayOffset = Math.round(currentLeft / STATE.dayColumnWidth);
+        const newStartDate = addDays(STATE.startDate, dayOffset);
+        const newEndDate = addDays(newStartDate, durationDays - 1);
+
+        const newStartStr = formatDate(newStartDate);
+        const newEndStr = formatDate(newEndDate);
+
+        // Update model
+        const mother = STATE.motherTasks.find(m => m.id === motherId);
+        if (mother) {
+          const child = mother.children.find(c => c.id === childId);
+          if (child) {
+            const oldStart = child.start;
+            child.start = newStartStr;
+            child.end = newEndStr;
+            showToast(`已将“${child.title}”排期更新为 ${newStartStr.slice(5)} 至 ${newEndStr.slice(5)}`);
+          }
+        }
+
+        renderAll();
+      }
+
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    });
+  }
+
+  // MODAL HANDLERS
+  function openEditTaskModal(motherId, childId) {
+    const mother = STATE.motherTasks.find(m => m.id === motherId);
+    if (!mother) return;
+    const child = mother.children.find(c => c.id === childId);
+    if (!child) return;
+
+    document.getElementById('edit-mother-id').value = motherId;
+    document.getElementById('edit-child-id').value = childId;
+    document.getElementById('edit-task-title').value = child.title;
+    document.getElementById('edit-task-start').value = child.start;
+    document.getElementById('edit-task-end').value = child.end;
+    document.getElementById('edit-date-error').classList.add('hidden');
+
+    const dur = diffDays(child.start, child.end) + 1;
+    document.getElementById('edit-calc-duration').textContent = `${dur} 天`;
+
+    document.getElementById('modal-task-edit').classList.remove('hidden');
+  }
+
+  function openAddChildModal(motherId, prefillDate) {
+    const mother = STATE.motherTasks.find(m => m.id === motherId);
+    if (!mother) return;
+
+    document.getElementById('add-child-mother-id').value = motherId;
+    document.getElementById('add-child-mother-name').value = mother.title;
+    document.getElementById('add-child-title').value = '';
+
+    const defaultStart = prefillDate || STATE.todayStr;
+    document.getElementById('add-child-start').value = defaultStart;
+    document.getElementById('add-child-end').value = defaultStart; // Default 1 day duration
+
+    document.getElementById('modal-add-child').classList.remove('hidden');
+  }
+
+  function openDependencyModal(targetMotherId) {
+    const targetMother = STATE.motherTasks.find(m => m.id === targetMotherId);
+    if (!targetMother) return;
+
+    document.getElementById('dep-target-mother-id').value = targetMotherId;
+    document.getElementById('dep-target-mother-title').textContent = targetMother.title;
+    document.getElementById('dep-error-banner').classList.add('hidden');
+
+    const select = document.getElementById('dep-source-select');
+    select.innerHTML = '<option value="">-- 无前置依赖 (独立并行) --</option>';
+
+    STATE.motherTasks.forEach(m => {
+      if (m.id !== targetMotherId) {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.title;
+        if (targetMother.dependsOn === m.id) {
+          opt.selected = true;
+        }
+        select.appendChild(opt);
+      }
+    });
+
+    document.getElementById('modal-dependency').classList.remove('hidden');
+  }
+
+  function closeAllModals() {
+    document.querySelectorAll('.fixed.inset-0').forEach(el => {
+      if (el.id.startsWith('modal-')) el.classList.add('hidden');
+    });
+  }
+
+  // EVENT BINDINGS
+  function initEvents() {
+    // Navigation: Prev / Next / Today
+    document.getElementById('btn-prev').addEventListener('click', () => {
+      const shift = STATE.viewMode === 'week' ? 7 : STATE.viewMode === 'biweek' ? 14 : 30;
+      STATE.startDate = addDays(STATE.startDate, -shift);
+      renderAll();
+    });
+
+    document.getElementById('btn-next').addEventListener('click', () => {
+      const shift = STATE.viewMode === 'week' ? 7 : STATE.viewMode === 'biweek' ? 14 : 30;
+      STATE.startDate = addDays(STATE.startDate, shift);
+      renderAll();
+    });
+
+    document.getElementById('btn-today').addEventListener('click', () => {
+      // Center today in current window
+      STATE.startDate = addDays(parseDate(STATE.todayStr), -3);
+      renderAll();
+      showToast("已重置时间轴至「今天」");
+    });
+
+    // View switcher tabs
+    document.querySelectorAll('.view-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.view-btn').forEach(b => {
+          b.className = "view-btn px-space-sm py-space-2xs rounded-md font-label-sm text-label-sm hover:text-on-surface transition-all";
+        });
+        btn.className = "view-btn px-space-sm py-space-2xs rounded-md font-label-sm text-label-sm bg-surface-container-lowest text-primary font-semibold shadow-sm transition-all";
+        STATE.viewMode = btn.dataset.view;
+        renderAll();
+      });
+    });
+
+    // Toggle dependencies checkbox
+    document.getElementById('toggle-deps').addEventListener('change', (e) => {
+      STATE.showDependencies = e.target.checked;
+      renderAll();
+    });
+
+    // Toggle expand/collapse all rows
+    let allCollapsed = false;
+    document.getElementById('btn-toggle-all-rows').addEventListener('click', () => {
+      allCollapsed = !allCollapsed;
+      STATE.motherTasks.forEach(m => {
+        STATE.collapsedMothers[m.id] = allCollapsed;
+      });
+      document.getElementById('btn-toggle-all-rows').innerHTML = `
+        <span class="material-symbols-outlined text-[16px]">${allCollapsed ? 'unfold_more' : 'unfold_less'}</span>
+        <span>${allCollapsed ? '展开全部' : '折叠全部'}</span>
+      `;
+      renderAll();
+    });
+
+    // Create mother button
+    document.getElementById('btn-create-mother').addEventListener('click', () => {
+      document.getElementById('new-mother-title').value = '';
+      document.getElementById('new-mother-first-child').value = '';
+      document.getElementById('modal-create-mother').classList.remove('hidden');
+    });
+
+    // Global click delegate for Left Panel action buttons
+    document.getElementById('left-tree-rows').addEventListener('click', (e) => {
+      const toggleBtn = e.target.closest('[data-toggle-mother]');
+      if (toggleBtn) {
+        const mid = toggleBtn.dataset.toggleMother;
+        STATE.collapsedMothers[mid] = !STATE.collapsedMothers[mid];
+        renderAll();
+        return;
+      }
+
+      const addChildBtn = e.target.closest('[data-add-child]');
+      if (addChildBtn) {
+        openAddChildModal(addChildBtn.dataset.addChild);
+        return;
+      }
+
+      const addDepBtn = e.target.closest('[data-add-dep]');
+      if (addDepBtn) {
+        openDependencyModal(addDepBtn.dataset.addDep);
+        return;
+      }
+
+      const editChild = e.target.closest('[data-edit-child]');
+      if (editChild) {
+        const [mid, cid] = editChild.dataset.editChild.split(',');
+        openEditTaskModal(mid, cid);
+        return;
+      }
+    });
+
+    // Close buttons on all modals
+    document.querySelectorAll('.btn-close-modal').forEach(btn => {
+      btn.addEventListener('click', closeAllModals);
+    });
+
+    // Form: Edit Child Task
+    const editStart = document.getElementById('edit-task-start');
+    const editEnd = document.getElementById('edit-task-end');
+    function updateEditDuration() {
+      if (editStart.value && editEnd.value) {
+        const d = diffDays(editStart.value, editEnd.value) + 1;
+        document.getElementById('edit-calc-duration').textContent = `${d > 0 ? d : 0} 天`;
+        if (d <= 0) {
+          document.getElementById('edit-date-error').classList.remove('hidden');
+        } else {
+          document.getElementById('edit-date-error').classList.add('hidden');
+        }
+      }
+    }
+    editStart.addEventListener('change', updateEditDuration);
+    editEnd.addEventListener('change', updateEditDuration);
+
+    document.getElementById('form-edit-task').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const mid = document.getElementById('edit-mother-id').value;
+      const cid = document.getElementById('edit-child-id').value;
+      const title = document.getElementById('edit-task-title').value.trim();
+      const start = editStart.value;
+      const end = editEnd.value;
+
+      if (end < start) {
+        document.getElementById('edit-date-error').classList.remove('hidden');
+        return;
+      }
+
+      const mother = STATE.motherTasks.find(m => m.id === mid);
+      if (mother) {
+        const child = mother.children.find(c => c.id === cid);
+        if (child) {
+          child.title = title;
+          child.start = start;
+          child.end = end;
+          showToast(`已更新子任务“${title}”`);
+        }
+      }
+      closeAllModals();
+      renderAll();
+    });
+
+    // Form: Add Child Task
+    document.getElementById('form-add-child').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const mid = document.getElementById('add-child-mother-id').value;
+      const title = document.getElementById('add-child-title').value.trim();
+      const start = document.getElementById('add-child-start').value;
+      const end = document.getElementById('add-child-end').value;
+
+      if (end < start) {
+        showToast("结束日期不能早于开始日期", true);
+        return;
+      }
+
+      const mother = STATE.motherTasks.find(m => m.id === mid);
+      if (mother) {
+        const newId = `C_${Date.now()}`;
+        mother.children.push({
+          id: newId,
+          title: title,
+          start: start,
+          end: end,
+          color: '#2563eb'
+        });
+        showToast(`已成功为“${mother.title}”添加子任务`);
+      }
+      closeAllModals();
+      renderAll();
+    });
+
+    // Form: Dependency Settings
+    document.getElementById('form-dependency').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const targetMid = document.getElementById('dep-target-mother-id').value;
+      const sourceMid = document.getElementById('dep-source-select').value || null;
+
+      if (sourceMid && createsCycle(targetMid, sourceMid)) {
+        document.getElementById('dep-error-text').textContent = "无法建立依赖：检测到循环依赖闭环！";
+        document.getElementById('dep-error-banner').classList.remove('hidden');
+        return;
+      }
+
+      const mother = STATE.motherTasks.find(m => m.id === targetMid);
+      if (mother) {
+        mother.dependsOn = sourceMid;
+        showToast(sourceMid ? `已绑定前置依赖关系` : `已解除前置依赖`);
+      }
+      closeAllModals();
+      renderAll();
+    });
+
+    // Remove Dependency button
+    document.getElementById('btn-dep-remove').addEventListener('click', () => {
+      const targetMid = document.getElementById('dep-target-mother-id').value;
+      const mother = STATE.motherTasks.find(m => m.id === targetMid);
+      if (mother) {
+        mother.dependsOn = null;
+        showToast(`已解除前置依赖`);
+      }
+      closeAllModals();
+      renderAll();
+    });
+
+    // Form: Create Mother Task
+    document.getElementById('form-create-mother').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const title = document.getElementById('new-mother-title').value.trim();
+      const firstChildTitle = document.getElementById('new-mother-first-child').value.trim();
+      if (!title) return;
+
+      const newMotherId = `M_${Date.now()}`;
+      const newMother = {
+        id: newMotherId,
+        title: title,
+        dependsOn: null,
+        children: []
+      };
+
+      if (firstChildTitle) {
+        newMother.children.push({
+          id: `C_${Date.now()}`,
+          title: firstChildTitle,
+          start: STATE.todayStr,
+          end: formatDate(addDays(parseDate(STATE.todayStr), 2)),
+          color: '#2563eb'
+        });
+      }
+
+      STATE.motherTasks.push(newMother);
+      showToast(`已创建母任务“${title}”`);
+      closeAllModals();
+      renderAll();
+    });
+
+    // Synchronize horizontal scroll for SVG and sticky header
+    const container = document.getElementById('timeline-scroll-container');
+    container.addEventListener('scroll', () => {
+      renderDependencyCurves(evaluateConflicts());
+    });
+  }
+
+  // Initialize
+  initEvents();
+  renderAll();
+
+})();
+</script><script>
+(() => {
+  let parsedImportData = null;
+
+  function getExportPayload(includeMeta = true) {
+    const totalMotherCount = STATE.motherTasks.length;
+    let totalChildrenCount = 0;
+    let totalDepsCount = 0;
+    STATE.motherTasks.forEach(m => {
+      if (m.children) totalChildrenCount += m.children.length;
+      if (m.dependsOn) totalDepsCount++;
+    });
+
+    const data = {
+      version: "planner-v3.2",
+      exportedAt: new Date().toISOString(),
+      project: "2026 Q3 产品路线与排期",
+      stats: {
+        motherTaskCount: totalMotherCount,
+        childTaskCount: totalChildrenCount,
+        dependencyCount: totalDepsCount
+      },
+      motherTasks: STATE.motherTasks
+    };
+
+    if (includeMeta) {
+      data.viewSettings = {
+        viewMode: STATE.viewMode,
+        startDate: STATE.startDate.toISOString(),
+        todayStr: STATE.todayStr,
+        showDependencies: STATE.showDependencies
+      };
+    }
+    return data;
+  }
+
+  function downloadBlob(content, filename, type = 'application/json') {
+    const blob = new Blob([content], { type: `${type};charset=utf-8;` });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  // Export modal trigger
+  const btnOpenExport = document.getElementById('btn-open-export-modal');
+  if (btnOpenExport) {
+    btnOpenExport.addEventListener('click', () => {
+      let totalChildren = 0;
+      let totalDeps = 0;
+      STATE.motherTasks.forEach(m => {
+        if (m.children) totalChildren += m.children.length;
+        if (m.dependsOn) totalDeps++;
+      });
+      document.getElementById('export-stat-mothers').textContent = `${STATE.motherTasks.length} 个`;
+      document.getElementById('export-stat-children').textContent = `${totalChildren} 个`;
+      document.getElementById('export-stat-deps').textContent = `${totalDeps} 条`;
+      document.getElementById('modal-export-json').classList.remove('hidden');
+    });
+  }
+
+  // Handle Export submission
+  const formExport = document.getElementById('form-export-json');
+  if (formExport) {
+    formExport.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const filename = (document.getElementById('export-file-name').value || 'schedule-plan-202609.json').trim();
+      const indent = document.getElementById('export-opt-indent').checked ? 2 : 0;
+      const includeMeta = document.getElementById('export-opt-meta').checked;
+      const data = getExportPayload(includeMeta);
+      const jsonText = JSON.stringify(data, null, indent);
+      downloadBlob(jsonText, filename.endsWith('.json') ? filename : `${filename}.json`);
+      document.getElementById('modal-export-json').classList.add('hidden');
+      showToast(`规划数据已成功导出为 ${filename}`);
+    });
+  }
+
+  // Import modal trigger
+  const btnOpenImport = document.getElementById('btn-open-import-modal');
+  const modalImport = document.getElementById('modal-import-json');
+  const fileInput = document.getElementById('json-file-input');
+  const dropZone = document.getElementById('import-drop-zone');
+  const previewBox = document.getElementById('import-preview-box');
+  const btnConfirmImport = document.getElementById('btn-confirm-import');
+  const dropText = document.getElementById('import-drop-text');
+
+  if (btnOpenImport) {
+    btnOpenImport.addEventListener('click', () => {
+      parsedImportData = null;
+      btnConfirmImport.disabled = true;
+      previewBox.classList.add('hidden');
+      dropText.textContent = '点击选择或将 JSON 文件拖拽至此';
+      modalImport.classList.remove('hidden');
+    });
+  }
+
+  if (dropZone) {
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('border-primary', 'bg-surface-container-low');
+    });
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('border-primary', 'bg-surface-container-low');
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('border-primary', 'bg-surface-container-low');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        processJsonFile(e.dataTransfer.files[0]);
+      }
+    });
+  }
+
+  if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        processJsonFile(e.target.files[0]);
+        e.target.value = '';
+      }
+    });
+  }
+
+  function processJsonFile(file) {
+    if (!file.name.endsWith('.json') && file.type !== 'application/json') {
+      showToast('请上传有效的 .json 格式文件', true);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const parsed = JSON.parse(evt.target.result);
+        let mothers = [];
+        if (Array.isArray(parsed)) {
+          mothers = parsed;
+        } else if (parsed && Array.isArray(parsed.motherTasks)) {
+          mothers = parsed.motherTasks;
+        } else {
+          throw new Error('未识别到母任务数组 motherTasks');
+        }
+
+        let childCount = 0;
+        let depCount = 0;
+        mothers.forEach(m => {
+          if (m.children && Array.isArray(m.children)) childCount += m.children.length;
+          if (m.dependsOn) depCount++;
+        });
+
+        parsedImportData = { mothers, parsedRaw: parsed };
+        dropText.textContent = `已选择文件：${file.name}`;
+        document.getElementById('import-file-name-label').textContent = file.name;
+        document.getElementById('import-summary-label').textContent = `包含 ${mothers.length} 个母任务，${childCount} 个子任务，${depCount} 条依赖连线`;
+        previewBox.classList.remove('hidden');
+        btnConfirmImport.disabled = false;
+        showToast('JSON 结构解析通过，请选择导入模式并确认');
+      } catch (err) {
+        showToast(`JSON 解析错误: ${err.message}`, true);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  if (btnConfirmImport) {
+    btnConfirmImport.addEventListener('click', () => {
+      if (!parsedImportData || !parsedImportData.mothers) return;
+      const mode = document.querySelector('input[name="import-mode"]:checked')?.value || 'overwrite';
+      const incomingMothers = parsedImportData.mothers;
+
+      let totalImportedChildren = 0;
+      incomingMothers.forEach(m => {
+        if (m.children) totalImportedChildren += m.children.length;
+      });
+
+      if (mode === 'overwrite') {
+        STATE.motherTasks = incomingMothers;
+        STATE.collapsedMothers = {};
+      } else {
+        incomingMothers.forEach(newMother => {
+          const exist = STATE.motherTasks.find(x => x.id === newMother.id);
+          if (exist) {
+            newMother.id = `M_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+          }
+          STATE.motherTasks.push(newMother);
+        });
+      }
+
+      modalImport.classList.add('hidden');
+      renderAll();
+      showToast(`成功导入 ${incomingMothers.length} 个母任务及 ${totalImportedChildren} 个子任务，依赖冲突已重新计算`);
+    });
+  }
+
+  // Download Sample JSON Template
+  const btnSample = document.getElementById('btn-download-sample');
+  if (btnSample) {
+    btnSample.addEventListener('click', () => {
+      const sample = {
+        version: "planner-v3.2",
+        project: "示例规划项目模板",
+        motherTasks: [
+          {
+            id: "DEMO_M1",
+            title: "用户成长体系升级",
+            dependsOn: null,
+            children: [
+              { id: "DEMO_C1", title: "等级权益原型评审", start: "2026-09-17", end: "2026-09-19", color: "#2563eb" },
+              { id: "DEMO_C2", title: "经验值结算接口开发", start: "2026-09-20", end: "2026-09-23", color: "#2563eb" }
+            ]
+          },
+          {
+            id: "DEMO_M2",
+            title: "积分商城二期联调",
+            dependsOn: "DEMO_M1",
+            children: [
+              { id: "DEMO_C3", title: "道具兑换服务部署", start: "2026-09-24", end: "2026-09-27", color: "#007d57" }
+            ]
+          }
+        ]
+      };
+      downloadBlob(JSON.stringify(sample, null, 2), "planner-template-sample.json");
+      showToast("已下载示例 JSON 模板文件");
+    });
+  }
+})();
+</script></main></div>
+
+</body></html>
