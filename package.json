@@ -15,6 +15,9 @@
     "check:web": "npm run typecheck && npm run lint && npm test && npm run lint:md && npm run build",
     "check:rust": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run-rust.ps1 -Action check",
     "build:desktop": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run-rust.ps1 -Action build",
+    "build:installer": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run-rust.ps1 -Action release",
+    "licenses:generate": "node scripts/generate-third-party-notices.mjs",
+    "check:offline": "node scripts/check-offline-assets.mjs",
     "tauri": "tauri"
   },
   "dependencies": {

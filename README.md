@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-项目目前已完成 M6 JSON 导入、导出与数据安全，下一阶段为 M7 发布候选与正式验收。仓库中包含：
+项目已完成 M0–M7，形成 Windows x64 v0.1.0 内部测试发布候选。仓库中包含：
 
 - 已整合的产品需求文档；
 - 可供视觉和交互参考的 HTML 原型；
@@ -31,9 +31,10 @@ npm run dev
 npm run check:web
 npm run check:rust
 npm run build:desktop
+npm run build:installer
 ```
 
-`build:desktop` 生成不打安装包的 debug EXE，用于开发阶段验证。正式 NSIS 安装包在 M7 发布阶段构建。
+`build:desktop` 生成不打安装包的 debug EXE，用于开发阶段验证；`build:installer` 生成 Windows x64 NSIS 安装包。
 
 ## 产品与技术方向
 
@@ -58,6 +59,9 @@ npm run build:desktop
 | 参考原型 | [docs/prototypes/README.md](docs/prototypes/README.md) |
 | v0.1 实施计划 | [docs/development/v0.1-implementation-plan.md](docs/development/v0.1-implementation-plan.md) |
 | 仓库结构约定 | [docs/development/repository-structure.md](docs/development/repository-structure.md) |
+| 使用指南 | [docs/user-guide.md](docs/user-guide.md) |
+| v0.1 验收矩阵 | [docs/requirements/v0.1-acceptance-matrix.md](docs/requirements/v0.1-acceptance-matrix.md) |
+| v0.1.0 发布说明 | [docs/releases/v0.1.0.md](docs/releases/v0.1.0.md) |
 
 ## 文档维护原则
 

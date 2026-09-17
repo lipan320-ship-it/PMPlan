@@ -28,6 +28,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"]
+    "targets": ["nsis"],
+    "resources": ["../docs/third-party-licenses.md"]
   }
 }

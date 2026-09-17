@@ -1,6 +1,6 @@
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet('check', 'build')]
+  [ValidateSet('check', 'build', 'release')]
   [string]$Action
 )
 
@@ -43,8 +43,10 @@ if ($Action -eq 'check') {
     "$quotedCargo test --manifest-path $quotedManifest",
     "$quotedCargo clippy --manifest-path $quotedManifest --all-targets --all-features -- -D warnings"
   ) -join ' && '
-} else {
+} elseif ($Action -eq 'build') {
   $taskCommand = "$quotedNpm run tauri -- build --debug --no-bundle"
+} else {
+  $taskCommand = "$quotedNpm run tauri -- build"
 }
 
 $commandLine = 'set "PATH=' + $vswhereDirectory + ';%PATH%"' +
