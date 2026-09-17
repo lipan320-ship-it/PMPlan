@@ -77,6 +77,120 @@ describe("App", () => {
     expect(screen.queryByText("数据分析")).not.toBeInTheDocument();
   });
 
+  it("toggles children from the mother name and exposes four icon actions", async () => {
+    const user = userEvent.setup();
+    const gateway = new MemoryStorageGateway(createEmptyBoard());
+    const mother = await gateway.createMotherTask({ name: "版本计划" });
+    await gateway.createSubTask({
+      motherTaskId: mother.id,
+      name: "需求梳理",
+      startDate: "2026-09-17",
+      endDate: null,
+    });
+    render(<App gateway={gateway} />);
+
+    const collapseByName = await screen.findByRole("button", {
+      name: "收起母任务“版本计划”",
+    });
+    expect(screen.getAllByText("需求梳理")).not.toHaveLength(0);
+    await user.click(collapseByName);
+    expect(screen.queryAllByText("需求梳理")).toHaveLength(0);
+    expect((await gateway.loadBoard()).tasks[0].expanded).toBe(false);
+
+    await user.click(
+      screen.getByRole("button", { name: "展开母任务“版本计划”" }),
+    );
+    expect(await screen.findAllByText("需求梳理")).not.toHaveLength(0);
+    expect(
+      screen.getByRole("button", { name: "修改母任务“版本计划”" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "设置“版本计划”的依赖" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "为“版本计划”添加子任务" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "删除母任务“版本计划”" }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "修改母任务“版本计划”" }),
+    );
+    expect(screen.getByRole("heading", { name: "编辑母任务" })).toBeInTheDocument();
+  });
+
+  it("highlights related tasks on hover without dimming unrelated tasks", async () => {
+    const gateway = new MemoryStorageGateway(createEmptyBoard());
+    const predecessor = await gateway.createMotherTask({ name: "前置任务" });
+    const successor = await gateway.createMotherTask({ name: "后置任务" });
+    await gateway.createMotherTask({ name: "独立任务" });
+    await gateway.setDependencies({
+      taskId: successor.id,
+      dependsOn: [predecessor.id],
+    });
+    const { container } = render(<App gateway={gateway} />);
+
+    const predecessorRow = (await screen.findByRole("button", {
+      name: "收起母任务“前置任务”",
+    })).closest(".task-row");
+    const successorRow = screen.getByRole("button", {
+      name: "收起母任务“后置任务”",
+    }).closest(".task-row");
+    const independentRow = screen.getByRole("button", {
+      name: "收起母任务“独立任务”",
+    }).closest(".task-row");
+    if (!predecessorRow || !successorRow || !independentRow) {
+      throw new Error("mother task row missing");
+    }
+
+    fireEvent.mouseEnter(successorRow);
+    expect(predecessorRow).toHaveClass("is-related");
+    expect(successorRow).toHaveClass("is-related");
+    expect(independentRow).not.toHaveClass("is-related");
+    expect(container.querySelector(".task-row.is-dimmed")).toBeNull();
+    expect(container.querySelector(".timeline-row.is-dimmed")).toBeNull();
+  });
+
+  it("reorders mother tasks by dragging and persists the new order", async () => {
+    const gateway = new MemoryStorageGateway(createEmptyBoard());
+    await gateway.createMotherTask({ name: "任务 A" });
+    await gateway.createMotherTask({ name: "任务 B" });
+    await gateway.createMotherTask({ name: "任务 C" });
+    render(<App gateway={gateway} />);
+
+    const firstRow = (await screen.findByRole("button", {
+      name: "收起母任务“任务 A”",
+    })).closest(".task-row");
+    const lastName = screen.getByRole("button", {
+      name: "收起母任务“任务 C”",
+    });
+    if (!firstRow) {
+      throw new Error("mother task row missing");
+    }
+
+    fireEvent.pointerDown(lastName, {
+      button: 0,
+      clientY: 20,
+      pointerId: 1,
+    });
+    fireEvent.pointerMove(lastName, { clientY: -10, pointerId: 1 });
+    fireEvent.pointerUp(lastName, { clientY: -10, pointerId: 1 });
+
+    await waitFor(async () => {
+      expect((await gateway.loadBoard()).tasks.map((task) => task.name)).toEqual([
+        "任务 C",
+        "任务 A",
+        "任务 B",
+      ]);
+    });
+    expect((await gateway.loadBoard()).tasks.map((task) => task.sortOrder)).toEqual([
+      0,
+      1,
+      2,
+    ]);
+  });
+
   it("requires confirmation before deleting a mother task", async () => {
     const user = userEvent.setup();
     const gateway = new MemoryStorageGateway(createEmptyBoard());
@@ -154,7 +268,7 @@ describe("App", () => {
     await user.click(screen.getByRole("checkbox", { name: /前置任务/ }));
     await user.click(screen.getByRole("button", { name: "保存依赖" }));
 
-    expect(await screen.findByRole("button", { name: "依赖 1" })).toBeInTheDocument();
+    expect(await screen.findByText("依赖 1")).toBeInTheDocument();
     expect(screen.getByTitle("当前排期与前置需求存在冲突")).toBeInTheDocument();
     expect(container.querySelector(".dependency-path.is-conflict")).not.toBeNull();
     expect((await gateway.loadBoard()).tasks[1].dependsOn).toEqual([

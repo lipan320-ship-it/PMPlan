@@ -86,6 +86,12 @@ pub struct SetMotherExpandedInput {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ReorderMotherTasksInput {
+    pub ordered_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateSubTaskInput {
     pub mother_task_id: String,
     pub name: String,

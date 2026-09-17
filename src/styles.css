@@ -456,11 +456,6 @@ input:focus-visible {
   transition: opacity 130ms ease, background 130ms ease;
 }
 
-.task-row.is-dimmed,
-.timeline-row.is-dimmed {
-  opacity: 0.34;
-}
-
 .task-row.is-related,
 .timeline-row.is-related {
   background-color: #f2f6ff;
@@ -487,8 +482,60 @@ input:focus-visible {
 }
 
 .task-row--mother {
+  position: relative;
   padding-left: 8px;
   font-weight: 700;
+}
+
+.task-row--mother.is-dragging {
+  opacity: 0.5;
+}
+
+.task-row--mother.is-drop-before::before,
+.task-row--mother.is-drop-after::after {
+  z-index: 8;
+  position: absolute;
+  right: 8px;
+  left: 8px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--primary);
+  box-shadow: 0 0 0 2px rgb(37 91 215 / 12%);
+  content: "";
+}
+
+.task-row--mother.is-drop-before::before {
+  top: -2px;
+}
+
+.task-row--mother.is-drop-after::after {
+  bottom: -2px;
+}
+
+.mother-drag-handle {
+  display: grid;
+  width: 16px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: #9aa7ba;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.mother-drag-handle:hover {
+  color: var(--primary);
+}
+
+.mother-drag-handle:active {
+  cursor: grabbing;
+}
+
+.mother-drag-handle svg {
+  width: 10px;
+  height: 18px;
+  fill: currentcolor;
 }
 
 .tree-toggle {
@@ -529,6 +576,8 @@ input:focus-visible {
 .task-name--mother {
   font-size: 13px;
   font-weight: 750;
+  touch-action: none;
+  user-select: none;
 }
 
 .task-count {
@@ -552,13 +601,7 @@ input:focus-visible {
   background: #e5edff;
   font-size: 9px;
   font-weight: 800;
-  cursor: pointer;
   white-space: nowrap;
-}
-
-.dependency-badge:hover:not(:disabled) {
-  color: #fff;
-  background: var(--primary);
 }
 
 .conflict-indicator {
@@ -586,21 +629,29 @@ input:focus-visible {
 }
 
 .row-action {
-  padding: 5px 7px;
+  display: grid;
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  place-items: center;
   border-radius: 6px;
   color: #52617a;
   background: transparent;
-  font-size: 10px;
-  font-weight: 700;
+}
+
+.row-action svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
 
 .row-action:hover:not(:disabled) {
   color: var(--primary);
   background: var(--primary-soft);
-}
-
-.row-action--danger {
-  font-size: 16px;
 }
 
 .row-action--danger:hover:not(:disabled) {

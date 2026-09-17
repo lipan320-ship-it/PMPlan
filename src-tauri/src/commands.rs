@@ -6,8 +6,8 @@ use tauri::State;
 use crate::{
     domain::{
         BoardSnapshot, CreateMotherTaskInput, CreateSubTaskInput, MotherTask,
-        RenameMotherTaskInput, SetDependenciesInput, SetMotherExpandedInput, SubTask,
-        UpdateSubTaskInput, ViewSettings,
+        RenameMotherTaskInput, ReorderMotherTasksInput, SetDependenciesInput,
+        SetMotherExpandedInput, SubTask, UpdateSubTaskInput, ViewSettings,
     },
     storage::{Storage, StorageError},
     transfer::{ImportMode, ImportPreview, TransferResult},
@@ -85,6 +85,14 @@ pub fn set_mother_expanded(
     input: SetMotherExpandedInput,
 ) -> Result<(), CommandError> {
     state.with_storage(|storage| storage.set_mother_expanded(&input.id, input.expanded))
+}
+
+#[tauri::command(async)]
+pub fn reorder_mother_tasks(
+    state: State<'_, AppState>,
+    input: ReorderMotherTasksInput,
+) -> Result<(), CommandError> {
+    state.with_storage(|storage| storage.reorder_mother_tasks(&input.ordered_ids))
 }
 
 #[tauri::command(async)]

@@ -44,6 +44,10 @@ export interface SetMotherExpandedInput {
   expanded: boolean;
 }
 
+export interface ReorderMotherTasksInput {
+  orderedIds: string[];
+}
+
 export interface CreateSubTaskInput {
   motherTaskId: string;
   name: string;

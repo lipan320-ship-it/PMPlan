@@ -74,6 +74,21 @@ type DeleteTarget =
   | { kind: "mother"; mother: MotherTask }
   | { kind: "subTask"; mother: MotherTask; subTask: SubTask };
 
+type MotherDropPosition = "before" | "after";
+
+interface MotherDropTarget {
+  id: string;
+  position: MotherDropPosition;
+}
+
+interface ActiveMotherDrag {
+  pointerId: number;
+  motherId: string;
+  startY: number;
+  moved: boolean;
+  suppressClick: boolean;
+}
+
 interface ToastState {
   tone: "success" | "error";
   message: string;
@@ -164,6 +179,33 @@ function buildRows(tasks: MotherTask[], search: string): BoardRow[] {
   }
 
   return rows;
+}
+
+function reorderMotherTasks(
+  tasks: MotherTask[],
+  draggedId: string,
+  targetId: string,
+  position: MotherDropPosition,
+): MotherTask[] {
+  if (draggedId === targetId) {
+    return tasks;
+  }
+
+  const draggedTask = tasks.find((task) => task.id === draggedId);
+  if (!draggedTask) {
+    return tasks;
+  }
+
+  const remaining = tasks.filter((task) => task.id !== draggedId);
+  const targetIndex = remaining.findIndex((task) => task.id === targetId);
+  if (targetIndex < 0) {
+    return tasks;
+  }
+
+  const insertionIndex = position === "after" ? targetIndex + 1 : targetIndex;
+  const reordered = [...remaining];
+  reordered.splice(insertionIndex, 0, draggedTask);
+  return reordered.map((task, sortOrder) => ({ ...task, sortOrder }));
 }
 
 function formatRange(range: ViewRange): string {
@@ -340,6 +382,48 @@ export function BoardPage({ gateway }: BoardPageProps) {
           : current,
       );
     }, mother.expanded ? "已收起母任务" : "已展开母任务");
+  };
+
+  const handleReorderMother = async (
+    draggedId: string,
+    targetId: string,
+    position: MotherDropPosition,
+  ) => {
+    if (!board) {
+      return;
+    }
+
+    const originalTasks = board.tasks;
+    const reorderedTasks = reorderMotherTasks(
+      originalTasks,
+      draggedId,
+      targetId,
+      position,
+    );
+    if (reorderedTasks === originalTasks) {
+      return;
+    }
+    if (reorderedTasks.every((task, index) => task.id === originalTasks[index]?.id)) {
+      return;
+    }
+
+    setBoard((current) =>
+      current ? { ...current, tasks: reorderedTasks } : current,
+    );
+    setBusy(true);
+    try {
+      await gateway.reorderMotherTasks({
+        orderedIds: reorderedTasks.map((task) => task.id),
+      });
+      setToast({ tone: "success", message: "母任务排序已更新" });
+    } catch (error) {
+      setBoard((current) =>
+        current ? { ...current, tasks: originalTasks } : current,
+      );
+      setToast({ tone: "error", message: messageFromError(error) });
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleSetAllExpanded = async (expanded: boolean) => {
@@ -757,6 +841,9 @@ export function BoardPage({ gateway }: BoardPageProps) {
     <main
       className="planner-shell"
       onDragEnter={(event) => {
+        if (!Array.from(event.dataTransfer.types).includes("Files")) {
+          return;
+        }
         event.preventDefault();
         setDragActive(true);
       }}
@@ -766,7 +853,11 @@ export function BoardPage({ gateway }: BoardPageProps) {
           setDragActive(false);
         }
       }}
-      onDragOver={(event) => event.preventDefault()}
+      onDragOver={(event) => {
+        if (Array.from(event.dataTransfer.types).includes("Files")) {
+          event.preventDefault();
+        }
+      }}
       onDrop={handleDrop}
     >
       <PlannerHeader />
@@ -937,6 +1028,9 @@ export function BoardPage({ gateway }: BoardPageProps) {
           }
           onRequestDeleteMother={(mother) =>
             setDeleteTarget({ kind: "mother", mother })
+          }
+          onReorderMother={(draggedId, targetId, position) =>
+            void handleReorderMother(draggedId, targetId, position)
           }
           onSetDependencies={setDependencyDialog}
           onQuickAdd={(mother, initialDate) =>
@@ -1130,6 +1224,11 @@ interface TimelineBoardProps {
   onToggleMother: (mother: MotherTask) => void;
   onEditMother: (mother: MotherTask) => void;
   onRequestDeleteMother: (mother: MotherTask) => void;
+  onReorderMother: (
+    draggedId: string,
+    targetId: string,
+    position: MotherDropPosition,
+  ) => void;
   onSetDependencies: (mother: MotherTask) => void;
   onAddSubTask: (mother: MotherTask) => void;
   onEditSubTask: (mother: MotherTask, subTask: SubTask) => void;
@@ -1152,6 +1251,7 @@ function TimelineBoard({
   onToggleMother,
   onEditMother,
   onRequestDeleteMother,
+  onReorderMother,
   onSetDependencies,
   onAddSubTask,
   onEditSubTask,
@@ -1174,6 +1274,12 @@ function TimelineBoard({
   const today = todayDateOnly();
   const todayIndex = range.dates.indexOf(today);
   const [focusedMotherId, setFocusedMotherId] = useState<string | null>(null);
+  const [draggedMotherId, setDraggedMotherId] = useState<string | null>(null);
+  const activeMotherDragRef = useRef<ActiveMotherDrag | null>(null);
+  const motherDropTargetRef = useRef<MotherDropTarget | null>(null);
+  const suppressedMotherClickRef = useRef<string | null>(null);
+  const [motherDropTarget, setMotherDropTarget] =
+    useState<MotherDropTarget | null>(null);
   const conflictMotherIds = useMemo(
     () => new Set(conflicts.map((conflict) => conflict.taskId)),
     [conflicts],
@@ -1207,6 +1313,96 @@ function TimelineBoard({
     return () => observer.disconnect();
   }, []);
 
+  const clearMotherDrag = () => {
+    activeMotherDragRef.current = null;
+    motherDropTargetRef.current = null;
+    setDraggedMotherId(null);
+    setMotherDropTarget(null);
+  };
+
+  const beginMotherDrag = (
+    mother: MotherTask,
+    event: ReactPointerEvent<HTMLElement>,
+    suppressClick: boolean,
+  ) => {
+    if (busy || event.button !== 0) {
+      return;
+    }
+    activeMotherDragRef.current = {
+      pointerId: event.pointerId,
+      motherId: mother.id,
+      startY: event.clientY,
+      moved: false,
+      suppressClick,
+    };
+    setDraggedMotherId(mother.id);
+    setMotherDropTarget(null);
+    if (typeof event.currentTarget.setPointerCapture === "function") {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+    event.preventDefault();
+  };
+
+  const updateMotherDrag = (event: ReactPointerEvent<HTMLElement>) => {
+    const active = activeMotherDragRef.current;
+    if (!active || active.pointerId !== event.pointerId) {
+      return;
+    }
+    if (!active.moved && Math.abs(event.clientY - active.startY) < 4) {
+      return;
+    }
+    active.moved = true;
+    event.preventDefault();
+
+    const motherRows = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        ".task-row--mother[data-mother-row-id]",
+      ),
+    ).filter((element) => element.dataset.motherRowId !== active.motherId);
+    let nextTarget: MotherDropTarget | null = null;
+    for (const element of motherRows) {
+      const id = element.dataset.motherRowId;
+      if (!id) {
+        continue;
+      }
+      const rectangle = element.getBoundingClientRect();
+      if (event.clientY < rectangle.top + rectangle.height / 2) {
+        nextTarget = { id, position: "before" };
+        break;
+      }
+      nextTarget = { id, position: "after" };
+    }
+    motherDropTargetRef.current = nextTarget;
+    setMotherDropTarget(nextTarget);
+  };
+
+  const finishMotherDrag = (event: ReactPointerEvent<HTMLElement>) => {
+    const active = activeMotherDragRef.current;
+    if (!active || active.pointerId !== event.pointerId) {
+      return;
+    }
+    if (
+      typeof event.currentTarget.hasPointerCapture === "function" &&
+      event.currentTarget.hasPointerCapture(event.pointerId)
+    ) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    const target = motherDropTargetRef.current;
+    if (active.moved && active.suppressClick) {
+      suppressedMotherClickRef.current = active.motherId;
+      window.setTimeout(() => {
+        if (suppressedMotherClickRef.current === active.motherId) {
+          suppressedMotherClickRef.current = null;
+        }
+      }, 0);
+    }
+    if (active.moved && target) {
+      onReorderMother(active.motherId, target.id, target.position);
+    }
+    clearMotherDrag();
+    event.preventDefault();
+  };
+
   return (
     <section className="board-frame" aria-label="工作规划时间板">
       <div className="board-scroll" ref={scrollRef}>
@@ -1224,8 +1420,20 @@ function TimelineBoard({
                 onEditMother={onEditMother}
                 onEditSubTask={onEditSubTask}
                 onRequestDeleteMother={onRequestDeleteMother}
+                draggedMotherId={draggedMotherId}
+                dropTarget={motherDropTarget}
+                onMotherPointerCancel={clearMotherDrag}
+                onMotherPointerDown={beginMotherDrag}
+                onMotherPointerMove={updateMotherDrag}
+                onMotherPointerUp={finishMotherDrag}
                 onSetDependencies={onSetDependencies}
-                onToggleMother={onToggleMother}
+                onToggleMother={(mother) => {
+                  if (suppressedMotherClickRef.current === mother.id) {
+                    suppressedMotherClickRef.current = null;
+                    return;
+                  }
+                  onToggleMother(mother);
+                }}
                 conflict={conflictMotherIds.has(row.mother.id)}
                 focusedMotherId={focusedMotherId}
                 relatedMotherIds={relatedMotherIds}
@@ -1307,6 +1515,50 @@ interface TaskTreeRowProps {
   focusedMotherId: string | null;
   relatedMotherIds: Set<string>;
   onFocusMother: (motherId: string | null) => void;
+  draggedMotherId: string | null;
+  dropTarget: MotherDropTarget | null;
+  onMotherPointerDown: (
+    mother: MotherTask,
+    event: ReactPointerEvent<HTMLElement>,
+    suppressClick: boolean,
+  ) => void;
+  onMotherPointerMove: (event: ReactPointerEvent<HTMLElement>) => void;
+  onMotherPointerUp: (event: ReactPointerEvent<HTMLElement>) => void;
+  onMotherPointerCancel: () => void;
+}
+
+type MotherActionIconName = "edit" | "dependency" | "add" | "delete";
+
+function MotherActionIcon({ name }: { name: MotherActionIconName }) {
+  if (name === "edit") {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <path d="M4 20h4l10.6-10.6a2.1 2.1 0 0 0-4-4L4 16v4Z" />
+        <path d="m13.5 6.5 4 4" />
+      </svg>
+    );
+  }
+  if (name === "dependency") {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <path d="M9.5 14.5 14.5 9.5" />
+        <path d="M7.2 16.8 5.6 18.4a2.8 2.8 0 0 1-4-4l3.1-3.1a2.8 2.8 0 0 1 4 0" />
+        <path d="m15.3 12.7a2.8 2.8 0 0 1 0-4l3.1-3.1a2.8 2.8 0 1 1 4 4l-1.6 1.6" />
+      </svg>
+    );
+  }
+  if (name === "add") {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <path d="M12 5v14M5 12h14" />
+      </svg>
+    );
+  }
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" />
+    </svg>
+  );
 }
 
 function TaskTreeRow({
@@ -1322,19 +1574,52 @@ function TaskTreeRow({
   focusedMotherId,
   relatedMotherIds,
   onFocusMother,
+  draggedMotherId,
+  dropTarget,
+  onMotherPointerDown,
+  onMotherPointerMove,
+  onMotherPointerUp,
+  onMotherPointerCancel,
 }: TaskTreeRowProps) {
   const focusClass = focusedMotherId
     ? relatedMotherIds.has(row.mother.id)
       ? "is-related"
-      : "is-dimmed"
+      : ""
     : "";
   if (row.kind === "mother") {
+    const dropPosition = dropTarget?.id === row.mother.id
+      ? dropTarget.position
+      : null;
+    const dragClass = [
+      draggedMotherId === row.mother.id ? "is-dragging" : "",
+      dropPosition ? `is-drop-${dropPosition}` : "",
+    ].filter(Boolean).join(" ");
     return (
       <div
-        className={`task-row task-row--mother ${conflict ? "has-conflict" : ""} ${focusClass}`}
+        className={`task-row task-row--mother ${conflict ? "has-conflict" : ""} ${focusClass} ${dragClass}`}
+        data-mother-row-id={row.mother.id}
         onMouseEnter={() => onFocusMother(row.mother.id)}
         onMouseLeave={() => onFocusMother(null)}
       >
+        <span
+          aria-hidden="true"
+          className="mother-drag-handle"
+          data-testid={`mother-drag-handle-${row.mother.id}`}
+          onPointerCancel={onMotherPointerCancel}
+          onPointerDown={(event) => onMotherPointerDown(row.mother, event, false)}
+          onPointerMove={onMotherPointerMove}
+          onPointerUp={onMotherPointerUp}
+          title="按住拖动调整母任务顺序"
+        >
+          <svg viewBox="0 0 12 18">
+            <circle cx="3" cy="4" r="1.2" />
+            <circle cx="9" cy="4" r="1.2" />
+            <circle cx="3" cy="9" r="1.2" />
+            <circle cx="9" cy="9" r="1.2" />
+            <circle cx="3" cy="14" r="1.2" />
+            <circle cx="9" cy="14" r="1.2" />
+          </svg>
+        </span>
         <button
           aria-label={row.mother.expanded ? "收起母任务" : "展开母任务"}
           className="tree-toggle"
@@ -1344,22 +1629,27 @@ function TaskTreeRow({
           {row.mother.expanded ? "⌄" : "›"}
         </button>
         <button
+          aria-expanded={row.mother.expanded}
+          aria-label={`${row.mother.expanded ? "收起" : "展开"}母任务“${row.mother.name}”`}
           className="task-name task-name--mother"
           disabled={busy}
-          onClick={() => onEditMother(row.mother)}
-          title="编辑母任务"
+          onClick={() => onToggleMother(row.mother)}
+          onPointerCancel={onMotherPointerCancel}
+          onPointerDown={(event) => onMotherPointerDown(row.mother, event, true)}
+          onPointerMove={onMotherPointerMove}
+          onPointerUp={onMotherPointerUp}
+          title={`${row.mother.expanded ? "点击收起子任务" : "点击展开子任务"}；按住拖动可调整顺序`}
         >
           {row.mother.name}
         </button>
         <span className="task-count">{row.mother.subTasks.length}</span>
         {row.mother.dependsOn.length > 0 ? (
-          <button
+          <span
             className="dependency-badge"
-            disabled={busy}
-            onClick={() => onSetDependencies(row.mother)}
+            title={`已有 ${row.mother.dependsOn.length} 个前置母任务`}
           >
             依赖 {row.mother.dependsOn.length}
-          </button>
+          </span>
         ) : null}
         {conflict ? (
           <span className="conflict-indicator" title="当前排期与前置需求存在冲突">
@@ -1368,20 +1658,31 @@ function TaskTreeRow({
         ) : null}
         <div className="row-actions">
           <button
+            aria-label={`修改母任务“${row.mother.name}”`}
+            className="row-action"
+            disabled={busy}
+            onClick={() => onEditMother(row.mother)}
+            title="修改母任务"
+          >
+            <MotherActionIcon name="edit" />
+          </button>
+          <button
             aria-label={`设置“${row.mother.name}”的依赖`}
             className="row-action"
             disabled={busy}
             onClick={() => onSetDependencies(row.mother)}
+            title="设置依赖"
           >
-            依赖
+            <MotherActionIcon name="dependency" />
           </button>
           <button
             aria-label={`为“${row.mother.name}”添加子任务`}
             className="row-action"
             disabled={busy}
             onClick={() => onAddSubTask(row.mother)}
+            title="添加子任务"
           >
-            ＋ 子任务
+            <MotherActionIcon name="add" />
           </button>
           <button
             aria-label={`删除母任务“${row.mother.name}”`}
@@ -1390,7 +1691,7 @@ function TaskTreeRow({
             onClick={() => onRequestDeleteMother(row.mother)}
             title="删除母任务"
           >
-            ×
+            <MotherActionIcon name="delete" />
           </button>
         </div>
       </div>
@@ -1462,7 +1763,7 @@ function TimelineRow({
   const focusClass = focusedMotherId
     ? relatedMotherIds.has(row.mother.id)
       ? "is-related"
-      : "is-dimmed"
+      : ""
     : "";
   const rowClass = `timeline-row timeline-row--${row.kind} ${focusClass}`;
   const background = (

@@ -43,6 +43,29 @@ describe("MemoryStorageGateway", () => {
     expect((await gateway.loadBoard()).tasks).toEqual([]);
   });
 
+  it("reorders every mother task and rejects incomplete order data", async () => {
+    const gateway = new MemoryStorageGateway(emptyBoard);
+    const taskA = await gateway.createMotherTask({ name: "A" });
+    const taskB = await gateway.createMotherTask({ name: "B" });
+    const taskC = await gateway.createMotherTask({ name: "C" });
+
+    await gateway.reorderMotherTasks({
+      orderedIds: [taskC.id, taskA.id, taskB.id],
+    });
+    const reordered = await gateway.loadBoard();
+    expect(reordered.tasks.map((task) => task.name)).toEqual(["C", "A", "B"]);
+    expect(reordered.tasks.map((task) => task.sortOrder)).toEqual([0, 1, 2]);
+
+    await expect(
+      gateway.reorderMotherTasks({ orderedIds: [taskA.id, taskB.id] }),
+    ).rejects.toThrow("必须完整包含");
+    expect((await gateway.loadBoard()).tasks.map((task) => task.name)).toEqual([
+      "C",
+      "A",
+      "B",
+    ]);
+  });
+
   it("previews, applies and exports JSON without partial invalid writes", async () => {
     const gateway = new MemoryStorageGateway(emptyBoard);
     const valid = JSON.stringify({

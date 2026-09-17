@@ -6,6 +6,7 @@ import {
   type CreateMotherTaskInput,
   type CreateSubTaskInput,
   type MotherTask,
+  type ReorderMotherTasksInput,
   type RenameMotherTaskInput,
   type SetDependenciesInput,
   type SetMotherExpandedInput,
@@ -63,6 +64,26 @@ export class MemoryStorageGateway implements StorageGateway {
 
   async setMotherExpanded(input: SetMotherExpandedInput): Promise<void> {
     this.requireMother(input.id).expanded = input.expanded;
+  }
+
+  async reorderMotherTasks(input: ReorderMotherTasksInput): Promise<void> {
+    const uniqueIds = new Set(input.orderedIds);
+    if (
+      input.orderedIds.length !== this.board.tasks.length ||
+      uniqueIds.size !== this.board.tasks.length ||
+      input.orderedIds.some((id) => !this.board.tasks.some((task) => task.id === id))
+    ) {
+      throw new DomainError(
+        "validation_error",
+        "母任务排序必须完整包含每个母任务且不能重复。",
+      );
+    }
+
+    const tasksById = new Map(this.board.tasks.map((task) => [task.id, task]));
+    this.board.tasks = input.orderedIds.map((id, sortOrder) => ({
+      ...tasksById.get(id)!,
+      sortOrder,
+    }));
   }
 
   async deleteMotherTask(id: string): Promise<void> {
