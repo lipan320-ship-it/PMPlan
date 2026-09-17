@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { createEmptyBoard } from "./app/createStorageGateway";
@@ -119,5 +119,52 @@ describe("App", () => {
 
     expect(screen.getByRole("heading", { name: "添加子任务" })).toBeInTheDocument();
     expect(screen.getByLabelText("开始日期")).toHaveValue("2026-09-14");
+  });
+
+  it("sets multiple-task dependencies and shows conflict feedback", async () => {
+    const user = userEvent.setup();
+    const gateway = new MemoryStorageGateway({
+      ...createEmptyBoard(),
+      viewSettings: {
+        viewMode: "biweek",
+        anchorDate: "2026-09-17",
+        showDependencies: true,
+      },
+    });
+    const predecessor = await gateway.createMotherTask({ name: "前置任务" });
+    const successor = await gateway.createMotherTask({ name: "后置任务" });
+    await gateway.createSubTask({
+      motherTaskId: predecessor.id,
+      name: "前置工作",
+      startDate: "2026-09-17",
+      endDate: "2026-09-20",
+    });
+    await gateway.createSubTask({
+      motherTaskId: successor.id,
+      name: "后置工作",
+      startDate: "2026-09-20",
+      endDate: "2026-09-22",
+    });
+    const { container } = render(<App gateway={gateway} />);
+
+    await screen.findByText("后置任务");
+    await user.click(
+      screen.getByRole("button", { name: "设置“后置任务”的依赖" }),
+    );
+    await user.click(screen.getByRole("checkbox", { name: /前置任务/ }));
+    await user.click(screen.getByRole("button", { name: "保存依赖" }));
+
+    expect(await screen.findByRole("button", { name: "依赖 1" })).toBeInTheDocument();
+    expect(screen.getByTitle("当前排期与前置需求存在冲突")).toBeInTheDocument();
+    expect(container.querySelector(".dependency-path.is-conflict")).not.toBeNull();
+    expect((await gateway.loadBoard()).tasks[1].dependsOn).toEqual([
+      predecessor.id,
+    ]);
+
+    await user.click(screen.getByRole("checkbox", { name: "显示依赖" }));
+    await waitFor(() => {
+      expect(container.querySelector(".dependency-path")).toBeNull();
+    });
+    expect((await gateway.loadBoard()).viewSettings.showDependencies).toBe(false);
   });
 });

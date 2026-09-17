@@ -15,6 +15,7 @@ import {
   todayDateOnly,
   validateDateRange,
 } from "../../domain/dateOnly";
+import { validateDependencyChange } from "../../domain/dependencies";
 import type {
   BoardSnapshot,
   DateOnly,
@@ -23,7 +24,11 @@ import type {
   ViewMode,
   ViewSettings,
 } from "../../domain/models";
-import { getMotherSpan } from "../../domain/schedule";
+import {
+  evaluateDependencyConflicts,
+  getMotherSpan,
+  type DependencyConflict,
+} from "../../domain/schedule";
 import type { StorageGateway } from "../../storage/gateway";
 import {
   moveSubTask,
@@ -137,6 +142,7 @@ export function BoardPage({ gateway }: BoardPageProps) {
   const [motherDialog, setMotherDialog] = useState<MotherDialogState | null>(null);
   const [subTaskDialog, setSubTaskDialog] = useState<SubTaskDialogState | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [dependencyDialog, setDependencyDialog] = useState<MotherTask | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
 
   const reloadBoard = async () => {
@@ -185,6 +191,10 @@ export function BoardPage({ gateway }: BoardPageProps) {
         ? getViewRange(board.viewSettings.viewMode, board.viewSettings.anchorDate)
         : null,
     [board],
+  );
+  const dependencyConflicts = useMemo(
+    () => evaluateDependencyConflicts(board?.tasks ?? []),
+    [board?.tasks],
   );
 
   const runAction = async (
@@ -456,6 +466,37 @@ export function BoardPage({ gateway }: BoardPageProps) {
     }
   };
 
+  const handleSetDependencies = async (
+    mother: MotherTask,
+    dependsOn: string[],
+  ) => {
+    if (!board) {
+      return;
+    }
+    const succeeded = await runAction(async () => {
+      validateDependencyChange(board.tasks, mother.id, dependsOn);
+      const savedDependencies = await gateway.setDependencies({
+        taskId: mother.id,
+        dependsOn,
+      });
+      setBoard((current) =>
+        current
+          ? {
+              ...current,
+              tasks: current.tasks.map((task) =>
+                task.id === mother.id
+                  ? { ...task, dependsOn: savedDependencies }
+                  : task,
+              ),
+            }
+          : current,
+      );
+    }, "需求依赖已保存");
+    if (succeeded) {
+      setDependencyDialog(null);
+    }
+  };
+
   if (loadError) {
     return (
       <main className="state-screen">
@@ -569,6 +610,20 @@ export function BoardPage({ gateway }: BoardPageProps) {
               value={search}
             />
           </label>
+          <label className="dependency-toggle">
+            <input
+              checked={board.viewSettings.showDependencies}
+              disabled={busy}
+              onChange={(event) =>
+                void saveViewSettings({
+                  ...board.viewSettings,
+                  showDependencies: event.target.checked,
+                })
+              }
+              type="checkbox"
+            />
+            显示依赖
+          </label>
           {board.tasks.length > 0 ? (
             <button
               className="button button--quiet"
@@ -611,13 +666,17 @@ export function BoardPage({ gateway }: BoardPageProps) {
           onRequestDeleteMother={(mother) =>
             setDeleteTarget({ kind: "mother", mother })
           }
+          onSetDependencies={setDependencyDialog}
           onQuickAdd={(mother, initialDate) =>
             setSubTaskDialog({ mode: "create", mother, initialDate })
           }
           onToggleMother={(mother) => void handleToggleMother(mother)}
           range={range}
           rows={rows}
+          tasks={board.tasks}
           viewMode={board.viewSettings.viewMode}
+          conflicts={dependencyConflicts}
+          showDependencies={board.viewSettings.showDependencies}
         />
       )}
 
@@ -695,6 +754,18 @@ export function BoardPage({ gateway }: BoardPageProps) {
         />
       ) : null}
 
+      {dependencyDialog ? (
+        <DependencyDialog
+          busy={busy}
+          mother={dependencyDialog}
+          onCancel={() => setDependencyDialog(null)}
+          onSubmit={(dependsOn) =>
+            handleSetDependencies(dependencyDialog, dependsOn)
+          }
+          tasks={board.tasks}
+        />
+      ) : null}
+
       {toast ? (
         <div className={`toast toast--${toast.tone}`} role="status">
           {toast.message}
@@ -729,12 +800,16 @@ function PlannerHeader() {
 
 interface TimelineBoardProps {
   rows: BoardRow[];
+  tasks: MotherTask[];
   range: ViewRange;
   viewMode: ViewMode;
   busy: boolean;
+  conflicts: DependencyConflict[];
+  showDependencies: boolean;
   onToggleMother: (mother: MotherTask) => void;
   onEditMother: (mother: MotherTask) => void;
   onRequestDeleteMother: (mother: MotherTask) => void;
+  onSetDependencies: (mother: MotherTask) => void;
   onAddSubTask: (mother: MotherTask) => void;
   onEditSubTask: (mother: MotherTask, subTask: SubTask) => void;
   onQuickAdd: (mother: MotherTask, initialDate: DateOnly) => void;
@@ -747,12 +822,16 @@ interface TimelineBoardProps {
 
 function TimelineBoard({
   rows,
+  tasks,
   range,
   viewMode,
   busy,
+  conflicts,
+  showDependencies,
   onToggleMother,
   onEditMother,
   onRequestDeleteMother,
+  onSetDependencies,
   onAddSubTask,
   onEditSubTask,
   onQuickAdd,
@@ -773,6 +852,27 @@ function TimelineBoard({
   const timelineWidth = range.dates.length * columnWidth;
   const today = todayDateOnly();
   const todayIndex = range.dates.indexOf(today);
+  const [focusedMotherId, setFocusedMotherId] = useState<string | null>(null);
+  const conflictMotherIds = useMemo(
+    () => new Set(conflicts.map((conflict) => conflict.taskId)),
+    [conflicts],
+  );
+  const relatedMotherIds = useMemo(() => {
+    if (!focusedMotherId) {
+      return new Set<string>();
+    }
+    const related = new Set([focusedMotherId]);
+    const focused = tasks.find((task) => task.id === focusedMotherId);
+    for (const dependencyId of focused?.dependsOn ?? []) {
+      related.add(dependencyId);
+    }
+    for (const task of tasks) {
+      if (task.dependsOn.includes(focusedMotherId)) {
+        related.add(task.id);
+      }
+    }
+    return related;
+  }, [focusedMotherId, tasks]);
 
   useEffect(() => {
     const element = scrollRef.current;
@@ -803,7 +903,12 @@ function TimelineBoard({
                 onEditMother={onEditMother}
                 onEditSubTask={onEditSubTask}
                 onRequestDeleteMother={onRequestDeleteMother}
+                onSetDependencies={onSetDependencies}
                 onToggleMother={onToggleMother}
+                conflict={conflictMotherIds.has(row.mother.id)}
+                focusedMotherId={focusedMotherId}
+                relatedMotherIds={relatedMotherIds}
+                onFocusMother={setFocusedMotherId}
                 row={row}
               />
             ))}
@@ -842,11 +947,24 @@ function TimelineBoard({
                   key={row.kind === "subTask" ? row.subTask.id : `${row.kind}-${row.mother.id}`}
                   onDirectUpdate={onDirectUpdate}
                   onEditSubTask={onEditSubTask}
+                  onFocusMother={setFocusedMotherId}
                   onQuickAdd={onQuickAdd}
+                  focusedMotherId={focusedMotherId}
+                  relatedMotherIds={relatedMotherIds}
                   range={range}
                   row={row}
                 />
               ))}
+              {showDependencies ? (
+                <DependencyLayer
+                  columnWidth={columnWidth}
+                  conflicts={conflicts}
+                  focusedMotherId={focusedMotherId}
+                  range={range}
+                  rows={rows}
+                  tasks={tasks}
+                />
+              ) : null}
             </div>
           </div>
         </div>
@@ -861,8 +979,13 @@ interface TaskTreeRowProps {
   onToggleMother: (mother: MotherTask) => void;
   onEditMother: (mother: MotherTask) => void;
   onRequestDeleteMother: (mother: MotherTask) => void;
+  onSetDependencies: (mother: MotherTask) => void;
   onAddSubTask: (mother: MotherTask) => void;
   onEditSubTask: (mother: MotherTask, subTask: SubTask) => void;
+  conflict: boolean;
+  focusedMotherId: string | null;
+  relatedMotherIds: Set<string>;
+  onFocusMother: (motherId: string | null) => void;
 }
 
 function TaskTreeRow({
@@ -871,12 +994,26 @@ function TaskTreeRow({
   onToggleMother,
   onEditMother,
   onRequestDeleteMother,
+  onSetDependencies,
   onAddSubTask,
   onEditSubTask,
+  conflict,
+  focusedMotherId,
+  relatedMotherIds,
+  onFocusMother,
 }: TaskTreeRowProps) {
+  const focusClass = focusedMotherId
+    ? relatedMotherIds.has(row.mother.id)
+      ? "is-related"
+      : "is-dimmed"
+    : "";
   if (row.kind === "mother") {
     return (
-      <div className="task-row task-row--mother">
+      <div
+        className={`task-row task-row--mother ${conflict ? "has-conflict" : ""} ${focusClass}`}
+        onMouseEnter={() => onFocusMother(row.mother.id)}
+        onMouseLeave={() => onFocusMother(null)}
+      >
         <button
           aria-label={row.mother.expanded ? "收起母任务" : "展开母任务"}
           className="tree-toggle"
@@ -894,7 +1031,29 @@ function TaskTreeRow({
           {row.mother.name}
         </button>
         <span className="task-count">{row.mother.subTasks.length}</span>
+        {row.mother.dependsOn.length > 0 ? (
+          <button
+            className="dependency-badge"
+            disabled={busy}
+            onClick={() => onSetDependencies(row.mother)}
+          >
+            依赖 {row.mother.dependsOn.length}
+          </button>
+        ) : null}
+        {conflict ? (
+          <span className="conflict-indicator" title="当前排期与前置需求存在冲突">
+            ⚠
+          </span>
+        ) : null}
         <div className="row-actions">
+          <button
+            aria-label={`设置“${row.mother.name}”的依赖`}
+            className="row-action"
+            disabled={busy}
+            onClick={() => onSetDependencies(row.mother)}
+          >
+            依赖
+          </button>
           <button
             aria-label={`为“${row.mother.name}”添加子任务`}
             className="row-action"
@@ -919,7 +1078,7 @@ function TaskTreeRow({
 
   if (row.kind === "empty") {
     return (
-      <div className="task-row task-row--empty">
+      <div className={`task-row task-row--empty ${focusClass}`}>
         <button
           className="empty-row-action"
           disabled={busy}
@@ -932,7 +1091,7 @@ function TaskTreeRow({
   }
 
   return (
-    <div className="task-row task-row--subtask">
+    <div className={`task-row task-row--subtask ${focusClass}`}>
       <span className="tree-branch" aria-hidden="true" />
       <button
         className="task-name"
@@ -962,6 +1121,9 @@ interface TimelineRowProps {
     subTask: SubTask,
     update: DateRangeUpdate,
   ) => void;
+  focusedMotherId: string | null;
+  relatedMotherIds: Set<string>;
+  onFocusMother: (motherId: string | null) => void;
 }
 
 function TimelineRow({
@@ -972,8 +1134,16 @@ function TimelineRow({
   onEditSubTask,
   onQuickAdd,
   onDirectUpdate,
+  focusedMotherId,
+  relatedMotherIds,
+  onFocusMother,
 }: TimelineRowProps) {
-  const rowClass = `timeline-row timeline-row--${row.kind}`;
+  const focusClass = focusedMotherId
+    ? relatedMotherIds.has(row.mother.id)
+      ? "is-related"
+      : "is-dimmed"
+    : "";
+  const rowClass = `timeline-row timeline-row--${row.kind} ${focusClass}`;
   const background = (
     <div
       aria-hidden="true"
@@ -993,7 +1163,15 @@ function TimelineRow({
   );
 
   if (row.kind === "empty") {
-    return <div className={rowClass}>{background}</div>;
+    return (
+      <div
+        className={rowClass}
+        onMouseEnter={() => onFocusMother(row.mother.id)}
+        onMouseLeave={() => onFocusMother(null)}
+      >
+        {background}
+      </div>
+    );
   }
 
   if (row.kind === "mother") {
@@ -1005,6 +1183,8 @@ function TimelineRow({
       <div
         className={`${rowClass} timeline-row--quick-add`}
         data-testid={`mother-timeline-${row.mother.id}`}
+        onMouseEnter={() => onFocusMother(row.mother.id)}
+        onMouseLeave={() => onFocusMother(null)}
         onDoubleClick={(event) => {
           if (busy) {
             return;
@@ -1037,7 +1217,11 @@ function TimelineRow({
     columnWidth,
   );
   return (
-    <div className={rowClass}>
+    <div
+      className={rowClass}
+      onMouseEnter={() => onFocusMother(row.mother.id)}
+      onMouseLeave={() => onFocusMother(null)}
+    >
       {background}
       {geometry ? (
         <InteractiveTaskBar
@@ -1051,6 +1235,140 @@ function TimelineRow({
         />
       ) : null}
     </div>
+  );
+}
+
+interface DependencyLayerProps {
+  rows: BoardRow[];
+  tasks: MotherTask[];
+  range: ViewRange;
+  columnWidth: number;
+  conflicts: DependencyConflict[];
+  focusedMotherId: string | null;
+}
+
+function DependencyLayer({
+  rows,
+  tasks,
+  range,
+  columnWidth,
+  conflicts,
+  focusedMotherId,
+}: DependencyLayerProps) {
+  const rowCenters = new Map<string, number>();
+  let totalHeight = 0;
+  for (const row of rows) {
+    const rowHeight = row.kind === "mother" ? 48 : 44;
+    if (row.kind === "mother") {
+      rowCenters.set(row.mother.id, totalHeight + rowHeight / 2);
+    }
+    totalHeight += rowHeight;
+  }
+
+  const tasksById = new Map(tasks.map((task) => [task.id, task]));
+  const conflictKeys = new Set(
+    conflicts.map(
+      (conflict) => `${conflict.dependsOnTaskId}->${conflict.taskId}`,
+    ),
+  );
+  const paths: Array<{
+    key: string;
+    d: string;
+    conflict: boolean;
+    related: boolean;
+  }> = [];
+
+  for (const target of tasks) {
+    const targetY = rowCenters.get(target.id);
+    const targetSpan = getMotherSpan(target);
+    if (targetY === undefined || !targetSpan) {
+      continue;
+    }
+    const targetGeometry = getBarGeometry(
+      targetSpan.startDate,
+      targetSpan.endDate,
+      range,
+      columnWidth,
+    );
+    if (!targetGeometry) {
+      continue;
+    }
+
+    for (const sourceId of target.dependsOn) {
+      const source = tasksById.get(sourceId);
+      const sourceY = rowCenters.get(sourceId);
+      const sourceSpan = source ? getMotherSpan(source) : null;
+      if (!source || sourceY === undefined || !sourceSpan) {
+        continue;
+      }
+      const sourceGeometry = getBarGeometry(
+        sourceSpan.startDate,
+        sourceSpan.endDate,
+        range,
+        columnWidth,
+      );
+      if (!sourceGeometry) {
+        continue;
+      }
+
+      const startX = sourceGeometry.left + sourceGeometry.width;
+      const endX = targetGeometry.left;
+      const controlX =
+        endX >= startX ? (startX + endX) / 2 : Math.max(startX, endX) + 34;
+      paths.push({
+        key: `${sourceId}->${target.id}`,
+        d: `M ${startX} ${sourceY} C ${controlX} ${sourceY}, ${controlX} ${targetY}, ${endX} ${targetY}`,
+        conflict: conflictKeys.has(`${sourceId}->${target.id}`),
+        related:
+          focusedMotherId === null ||
+          focusedMotherId === sourceId ||
+          focusedMotherId === target.id,
+      });
+    }
+  }
+
+  if (paths.length === 0) {
+    return null;
+  }
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="dependency-layer"
+      height={totalHeight}
+      width={range.dates.length * columnWidth}
+    >
+      <defs>
+        <marker
+          id="dependency-arrow"
+          markerHeight="7"
+          markerWidth="7"
+          orient="auto"
+          refX="6"
+          refY="3.5"
+        >
+          <path d="M 0 0 L 7 3.5 L 0 7 z" fill="#5372ad" />
+        </marker>
+        <marker
+          id="dependency-arrow-conflict"
+          markerHeight="7"
+          markerWidth="7"
+          orient="auto"
+          refX="6"
+          refY="3.5"
+        >
+          <path d="M 0 0 L 7 3.5 L 0 7 z" fill="#c23b45" />
+        </marker>
+      </defs>
+      {paths.map((path) => (
+        <path
+          className={`dependency-path ${path.conflict ? "is-conflict" : ""} ${path.related ? "is-related" : "is-dimmed"}`}
+          d={path.d}
+          key={path.key}
+          markerEnd={`url(#${path.conflict ? "dependency-arrow-conflict" : "dependency-arrow"})`}
+        />
+      ))}
+    </svg>
   );
 }
 
@@ -1456,6 +1774,109 @@ function SubTaskDialog({
               {mode === "create" ? "添加" : "保存"}
             </button>
           </div>
+        </footer>
+      </form>
+    </DialogShell>
+  );
+}
+
+interface DependencyDialogProps {
+  mother: MotherTask;
+  tasks: MotherTask[];
+  busy: boolean;
+  onCancel: () => void;
+  onSubmit: (dependsOn: string[]) => Promise<void>;
+}
+
+function DependencyDialog({
+  mother,
+  tasks,
+  busy,
+  onCancel,
+  onSubmit,
+}: DependencyDialogProps) {
+  const [selected, setSelected] = useState(() => new Set(mother.dependsOn));
+  const [search, setSearch] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const candidates = tasks.filter(
+    (task) =>
+      task.id !== mother.id &&
+      task.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()),
+  );
+
+  const handleSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    const dependsOn = tasks
+      .filter((task) => selected.has(task.id))
+      .map((task) => task.id);
+    try {
+      validateDependencyChange(tasks, mother.id, dependsOn);
+      setError(null);
+      void onSubmit(dependsOn);
+    } catch (validationError) {
+      setError(messageFromError(validationError));
+    }
+  };
+
+  return (
+    <DialogShell title="设置需求依赖" onCancel={onCancel}>
+      <form className="form-stack" onSubmit={handleSubmit}>
+        <p className="form-context">
+          当前母任务：<strong>{mother.name}</strong>
+        </p>
+        <label className="field-label">
+          <span>搜索前置母任务</span>
+          <input
+            autoFocus
+            disabled={busy}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="输入母任务名称"
+            type="search"
+            value={search}
+          />
+        </label>
+        <div className="dependency-options">
+          {candidates.length > 0 ? (
+            candidates.map((candidate) => (
+              <label className="dependency-option" key={candidate.id}>
+                <input
+                  checked={selected.has(candidate.id)}
+                  disabled={busy}
+                  onChange={(event) => {
+                    setSelected((current) => {
+                      const next = new Set(current);
+                      if (event.target.checked) {
+                        next.add(candidate.id);
+                      } else {
+                        next.delete(candidate.id);
+                      }
+                      return next;
+                    });
+                    setError(null);
+                  }}
+                  type="checkbox"
+                />
+                <span>
+                  <strong>{candidate.name}</strong>
+                  <small>{candidate.subTasks.length} 个子任务</small>
+                </span>
+              </label>
+            ))
+          ) : (
+            <p className="dependency-options__empty">
+              {tasks.length <= 1 ? "暂无其他母任务可选" : "没有匹配的母任务"}
+            </p>
+          )}
+        </div>
+        <p className="field-hint">已选择 {selected.size} 个前置母任务。</p>
+        {error ? <p className="field-error">{error}</p> : null}
+        <footer className="modal-actions modal-actions--end">
+          <button className="button button--quiet" disabled={busy} onClick={onCancel} type="button">
+            取消
+          </button>
+          <button className="button button--primary" disabled={busy} type="submit">
+            保存依赖
+          </button>
         </footer>
       </form>
     </DialogShell>
