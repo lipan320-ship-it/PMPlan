@@ -14,6 +14,14 @@ import {
   type ViewSettings,
 } from "../domain/models";
 import type { StorageGateway } from "./gateway";
+import { exportBoardJson, prepareJsonImport } from "../transfer/jsonTransfer";
+import type {
+  ExportResponse,
+  ImportMode,
+  ImportPreview,
+  ImportSource,
+  TransferResult,
+} from "../transfer/types";
 
 function requiredName(value: string): string {
   const name = value.trim();
@@ -104,6 +112,58 @@ export class MemoryStorageGateway implements StorageGateway {
     this.board.viewSettings = structuredClone(settings);
   }
 
+  async analyzeImport(
+    source: ImportSource,
+    mode: ImportMode,
+  ): Promise<ImportPreview> {
+    const content = this.requireContentSource(source);
+    let previewId = this.nextId;
+    return prepareJsonImport(
+      content,
+      mode,
+      this.board,
+      (prefix) => `memory_${prefix}_${previewId++}`,
+    ).preview;
+  }
+
+  async applyImport(
+    source: ImportSource,
+    mode: ImportMode,
+  ): Promise<TransferResult> {
+    const content = this.requireContentSource(source);
+    let nextId = this.nextId;
+    const prepared = prepareJsonImport(
+      content,
+      mode,
+      this.board,
+      (prefix) => `memory_${prefix}_${nextId++}`,
+    );
+    if (!prepared.preview.valid || !prepared.board) {
+      throw new DomainError(
+        "validation_error",
+        prepared.preview.errors[0]?.message ?? "导入文件校验失败。",
+      );
+    }
+    this.board = prepared.board;
+    this.nextId = nextId;
+    return {
+      motherTaskCount: prepared.preview.motherTaskCount,
+      subTaskCount: prepared.preview.subTaskCount,
+      dependencyCount: prepared.preview.dependencyCount,
+    };
+  }
+
+  async exportJson(destinationPath?: string): Promise<ExportResponse> {
+    if (destinationPath) {
+      throw new DomainError(
+        "unsupported_path",
+        "浏览器预览模式不能写入系统文件路径。",
+      );
+    }
+    const exported = exportBoardJson(this.board);
+    return { content: exported.content, result: exported.result };
+  }
+
   private requireMother(id: string): MotherTask {
     const mother = this.board.tasks.find((task) => task.id === id);
     if (!mother) {
@@ -120,5 +180,15 @@ export class MemoryStorageGateway implements StorageGateway {
       }
     }
     throw new DomainError("not_found", "子任务不存在。");
+  }
+
+  private requireContentSource(source: ImportSource): string {
+    if (source.kind !== "content") {
+      throw new DomainError(
+        "unsupported_path",
+        "浏览器预览模式不能读取系统文件路径。",
+      );
+    }
+    return source.value;
   }
 }

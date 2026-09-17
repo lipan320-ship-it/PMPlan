@@ -92,7 +92,7 @@ impl StorageError {
 }
 
 pub struct Storage {
-    connection: Connection,
+    pub(crate) connection: Connection,
 }
 
 impl Storage {
@@ -106,7 +106,7 @@ impl Storage {
     }
 
     #[cfg(test)]
-    fn open_in_memory() -> Result<Self, StorageError> {
+    pub(crate) fn open_in_memory() -> Result<Self, StorageError> {
         Self::initialize(Connection::open_in_memory()?)
     }
 

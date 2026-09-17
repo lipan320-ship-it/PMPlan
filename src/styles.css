@@ -1101,6 +1101,147 @@ input:focus-visible {
   font-size: 12px;
 }
 
+.import-file-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid #cbd8ec;
+  border-radius: 10px;
+  background: #f6f8fc;
+}
+
+.import-file-summary strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.import-file-summary span {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.import-modes {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+}
+
+.import-modes legend {
+  margin-bottom: 7px;
+  color: #3f4d63;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.import-modes label {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.import-modes label:has(input:checked) {
+  border-color: #9eb7ed;
+  background: #f1f5ff;
+}
+
+.import-modes input {
+  accent-color: var(--primary);
+}
+
+.import-modes span,
+.import-modes strong,
+.import-modes small {
+  display: block;
+}
+
+.import-modes strong {
+  font-size: 12px;
+}
+
+.import-modes small {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.import-valid {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #176848;
+  background: #eefaf4;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.import-errors {
+  max-height: 210px;
+  overflow: auto;
+  padding: 11px 12px;
+  border-radius: 9px;
+  color: #8f222c;
+  background: var(--danger-soft);
+  font-size: 11px;
+}
+
+.import-errors > strong {
+  display: block;
+  margin-bottom: 7px;
+}
+
+.import-errors ul {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.import-errors li {
+  display: grid;
+  grid-template-columns: minmax(95px, 0.45fr) 1fr;
+  gap: 8px;
+}
+
+.import-errors code {
+  overflow-wrap: anywhere;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.drop-overlay {
+  z-index: 180;
+  position: fixed;
+  inset: 14px;
+  display: grid;
+  place-items: center;
+  border: 3px dashed #7e9fe9;
+  border-radius: 18px;
+  pointer-events: none;
+  background: rgb(233 240 255 / 90%);
+  backdrop-filter: blur(8px);
+}
+
+.drop-overlay div {
+  padding: 18px 24px;
+  border-radius: 13px;
+  color: var(--primary);
+  background: #fff;
+  box-shadow: var(--shadow-card);
+  font-size: 15px;
+  font-weight: 800;
+}
+
 .field-hint {
   margin-top: -9px;
   color: var(--text-muted);

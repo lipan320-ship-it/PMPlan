@@ -167,4 +167,54 @@ describe("App", () => {
     });
     expect((await gateway.loadBoard()).viewSettings.showDependencies).toBe(false);
   });
+
+  it("previews and confirms a transactional overwrite import", async () => {
+    const user = userEvent.setup();
+    const gateway = new MemoryStorageGateway(createEmptyBoard());
+    await gateway.createMotherTask({ name: "Current data" });
+    const { container } = render(<App gateway={gateway} />);
+    const content = JSON.stringify({
+      version: "1.0",
+      tasks: [
+        {
+          id: "T-001",
+          name: "Imported plan",
+          expanded: true,
+          dependsOn: [],
+          subTasks: [
+            {
+              id: "S-001",
+              name: "Imported work",
+              startDate: "2026-10-03",
+              endDate: null,
+            },
+          ],
+        },
+      ],
+    });
+    await screen.findByText("Current data");
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]');
+    if (!input) {
+      throw new Error("file input missing");
+    }
+
+    await user.upload(
+      input,
+      new File([content], "planning.json", { type: "application/json" }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: "导入规划数据" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/1 个母任务 · 1 个子任务/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "开始导入" }));
+    expect(
+      screen.getByRole("heading", { name: "确认覆盖当前规划" }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "确认覆盖" }));
+
+    expect(await screen.findAllByText("Imported plan")).not.toHaveLength(0);
+    const board = await gateway.loadBoard();
+    expect(board.tasks.map((task) => task.name)).toEqual(["Imported plan"]);
+    expect(board.viewSettings.anchorDate).toBe("2026-10-03");
+  });
 });

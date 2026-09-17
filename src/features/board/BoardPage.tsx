@@ -4,10 +4,14 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type ChangeEvent,
+  type DragEvent as ReactDragEvent,
   type FormEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
+import { isTauri } from "@tauri-apps/api/core";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import {
   compareDateOnly,
   dayOfWeek,
@@ -30,6 +34,11 @@ import {
   type DependencyConflict,
 } from "../../domain/schedule";
 import type { StorageGateway } from "../../storage/gateway";
+import type {
+  ImportMode,
+  ImportPreview,
+  ImportSource,
+} from "../../transfer/types";
 import {
   moveSubTask,
   pixelsToDayOffset,
@@ -68,6 +77,12 @@ type DeleteTarget =
 interface ToastState {
   tone: "success" | "error";
   message: string;
+}
+
+interface ImportState {
+  source: ImportSource;
+  mode: ImportMode;
+  preview: ImportPreview;
 }
 
 const weekdayLabels = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
@@ -134,6 +149,18 @@ function messageFromError(error: unknown): string {
   return "操作失败，请重试。";
 }
 
+function getEarliestStartDate(tasks: MotherTask[]): DateOnly | null {
+  const dates = tasks.flatMap((task) =>
+    task.subTasks.map((subTask) => subTask.startDate),
+  );
+  if (dates.length === 0) {
+    return null;
+  }
+  return dates.reduce((earliest, value) =>
+    compareDateOnly(value, earliest) < 0 ? value : earliest,
+  );
+}
+
 export function BoardPage({ gateway }: BoardPageProps) {
   const [board, setBoard] = useState<BoardSnapshot | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -143,7 +170,11 @@ export function BoardPage({ gateway }: BoardPageProps) {
   const [subTaskDialog, setSubTaskDialog] = useState<SubTaskDialogState | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [dependencyDialog, setDependencyDialog] = useState<MotherTask | null>(null);
+  const [importState, setImportState] = useState<ImportState | null>(null);
+  const [confirmOverwrite, setConfirmOverwrite] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reloadBoard = async () => {
     setLoadError(null);
@@ -497,6 +528,141 @@ export function BoardPage({ gateway }: BoardPageProps) {
     }
   };
 
+  const analyzeImport = async (source: ImportSource, mode: ImportMode) => {
+    setBusy(true);
+    try {
+      const preview = await gateway.analyzeImport(source, mode);
+      setImportState({ source, mode, preview });
+    } catch (error) {
+      setToast({ tone: "error", message: messageFromError(error) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleImportRequest = async () => {
+    if (isTauri()) {
+      const selected = await open({
+        directory: false,
+        multiple: false,
+        filters: [{ name: "JSON 规划文件", extensions: ["json"] }],
+      });
+      if (typeof selected === "string") {
+        await analyzeImport(
+          {
+            kind: "path",
+            value: selected,
+            fileName: selected.split(/[\\/]/).at(-1) ?? selected,
+          },
+          "overwrite",
+        );
+      }
+      return;
+    }
+    fileInputRef.current?.click();
+  };
+
+  const analyzeBrowserFile = async (file: File) => {
+    if (!file.name.toLocaleLowerCase().endsWith(".json")) {
+      setToast({ tone: "error", message: "请选择 .json 格式文件。" });
+      return;
+    }
+    await analyzeImport(
+      { kind: "content", value: await file.text(), fileName: file.name },
+      "overwrite",
+    );
+  };
+
+  const handleFileInput = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) {
+      void analyzeBrowserFile(file);
+    }
+  };
+
+  const handleDrop = (event: ReactDragEvent<HTMLElement>) => {
+    event.preventDefault();
+    setDragActive(false);
+    const file = event.dataTransfer.files[0];
+    if (file) {
+      void analyzeBrowserFile(file);
+    }
+  };
+
+  const executeImport = async () => {
+    if (!importState) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const result = await gateway.applyImport(importState.source, importState.mode);
+      let loaded = await gateway.loadBoard();
+      const earliestDate = getEarliestStartDate(loaded.tasks);
+      if (earliestDate) {
+        const settings = { ...loaded.viewSettings, anchorDate: earliestDate };
+        await gateway.saveViewSettings(settings);
+        loaded = { ...loaded, viewSettings: settings };
+      }
+      setBoard(loaded);
+      setImportState(null);
+      setConfirmOverwrite(false);
+      setToast({
+        tone: "success",
+        message: `已导入 ${result.motherTaskCount} 个母任务 / ${result.subTaskCount} 个子任务`,
+      });
+    } catch (error) {
+      setConfirmOverwrite(false);
+      setToast({ tone: "error", message: messageFromError(error) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleExport = async () => {
+    setBusy(true);
+    try {
+      const filename = `工作规划时间板_${todayDateOnly()}.json`;
+      if (isTauri()) {
+        const destination = await save({
+          defaultPath: filename,
+          filters: [{ name: "JSON 规划文件", extensions: ["json"] }],
+        });
+        if (!destination) {
+          return;
+        }
+        const response = await gateway.exportJson(destination);
+        setToast({
+          tone: "success",
+          message: `已导出 ${response.result.motherTaskCount} 个母任务 / ${response.result.subTaskCount} 个子任务`,
+        });
+        return;
+      }
+
+      const response = await gateway.exportJson();
+      if (!response.content) {
+        throw new Error("导出内容为空。");
+      }
+      const blob = new Blob(["\uFEFF", response.content], {
+        type: "application/json;charset=utf-8",
+      });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setToast({
+        tone: "success",
+        message: `已导出 ${response.result.motherTaskCount} 个母任务 / ${response.result.subTaskCount} 个子任务`,
+      });
+    } catch (error) {
+      setToast({ tone: "error", message: messageFromError(error) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (loadError) {
     return (
       <main className="state-screen">
@@ -524,7 +690,21 @@ export function BoardPage({ gateway }: BoardPageProps) {
   const allExpanded = board.tasks.every((task) => task.expanded);
 
   return (
-    <main className="planner-shell">
+    <main
+      className="planner-shell"
+      onDragEnter={(event) => {
+        event.preventDefault();
+        setDragActive(true);
+      }}
+      onDragLeave={(event) => {
+        const nextTarget = event.relatedTarget;
+        if (!(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
+          setDragActive(false);
+        }
+      }}
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={handleDrop}
+    >
       <PlannerHeader />
       <section className="planner-toolbar" aria-label="时间板工具栏">
         <div className="period-controls">
@@ -634,6 +814,20 @@ export function BoardPage({ gateway }: BoardPageProps) {
             </button>
           ) : null}
           <button
+            className="button button--quiet"
+            disabled={busy}
+            onClick={() => void handleImportRequest()}
+          >
+            导入 JSON
+          </button>
+          <button
+            className="button button--quiet"
+            disabled={busy}
+            onClick={() => void handleExport()}
+          >
+            导出 JSON
+          </button>
+          <button
             className="button button--primary"
             disabled={busy}
             onClick={() => setMotherDialog({ mode: "create" })}
@@ -644,7 +838,10 @@ export function BoardPage({ gateway }: BoardPageProps) {
       </section>
 
       {board.tasks.length === 0 ? (
-        <EmptyBoard onCreate={() => setMotherDialog({ mode: "create" })} />
+        <EmptyBoard
+          onCreate={() => setMotherDialog({ mode: "create" })}
+          onImport={() => void handleImportRequest()}
+        />
       ) : rows.length === 0 ? (
         <div className="no-results">
           <span>没有找到“{search}”</span>
@@ -765,6 +962,48 @@ export function BoardPage({ gateway }: BoardPageProps) {
           tasks={board.tasks}
         />
       ) : null}
+
+      {importState && !confirmOverwrite ? (
+        <ImportDialog
+          busy={busy}
+          state={importState}
+          onCancel={() => setImportState(null)}
+          onModeChange={(mode) => void analyzeImport(importState.source, mode)}
+          onSubmit={() => {
+            if (importState.mode === "overwrite") {
+              setConfirmOverwrite(true);
+            } else {
+              void executeImport();
+            }
+          }}
+        />
+      ) : null}
+
+      {confirmOverwrite && importState ? (
+        <ConfirmDialog
+          busy={busy}
+          description="覆盖导入将替换当前全部规划数据。此操作不可撤销，是否继续？"
+          onCancel={() => setConfirmOverwrite(false)}
+          onConfirm={() => void executeImport()}
+          title="确认覆盖当前规划"
+          confirmLabel="确认覆盖"
+        />
+      ) : null}
+
+      {dragActive ? (
+        <div className="drop-overlay" aria-hidden="true">
+          <div>松开以导入 JSON 规划文件</div>
+        </div>
+      ) : null}
+
+      <input
+        accept=".json,application/json"
+        className="sr-only"
+        onChange={handleFileInput}
+        ref={fileInputRef}
+        tabIndex={-1}
+        type="file"
+      />
 
       {toast ? (
         <div className={`toast toast--${toast.tone}`} role="status">
@@ -1565,7 +1804,13 @@ function getBarGeometry(
   };
 }
 
-function EmptyBoard({ onCreate }: { onCreate: () => void }) {
+function EmptyBoard({
+  onCreate,
+  onImport,
+}: {
+  onCreate: () => void;
+  onImport: () => void;
+}) {
   return (
     <section className="empty-board">
       <div className="empty-board__illustration" aria-hidden="true">
@@ -1584,8 +1829,8 @@ function EmptyBoard({ onCreate }: { onCreate: () => void }) {
         >
           ＋ 新建母任务
         </button>
-        <button className="button button--quiet" disabled title="将在 M6 开放">
-          导入 JSON（稍后开放）
+        <button className="button button--quiet" onClick={onImport}>
+          导入 JSON
         </button>
       </div>
     </section>
@@ -1883,12 +2128,98 @@ function DependencyDialog({
   );
 }
 
+interface ImportDialogProps {
+  state: ImportState;
+  busy: boolean;
+  onCancel: () => void;
+  onModeChange: (mode: ImportMode) => void;
+  onSubmit: () => void;
+}
+
+function ImportDialog({
+  state,
+  busy,
+  onCancel,
+  onModeChange,
+  onSubmit,
+}: ImportDialogProps) {
+  return (
+    <DialogShell title="导入规划数据" onCancel={onCancel}>
+      <div className="form-stack">
+        <div className="import-file-summary">
+          <strong>{state.source.fileName}</strong>
+          <span>
+            版本 {state.preview.version ?? "未知"} · {state.preview.motherTaskCount} 个母任务 · {state.preview.subTaskCount} 个子任务 · {state.preview.dependencyCount} 条依赖
+          </span>
+        </div>
+        <fieldset className="import-modes">
+          <legend>导入方式</legend>
+          <label>
+            <input
+              checked={state.mode === "overwrite"}
+              disabled={busy}
+              name="import-mode"
+              onChange={() => onModeChange("overwrite")}
+              type="radio"
+            />
+            <span>
+              <strong>覆盖</strong>
+              <small>替换当前全部规划数据</small>
+            </span>
+          </label>
+          <label>
+            <input
+              checked={state.mode === "merge"}
+              disabled={busy}
+              name="import-mode"
+              onChange={() => onModeChange("merge")}
+              type="radio"
+            />
+            <span>
+              <strong>合并</strong>
+              <small>按 id 更新，文件中没有的当前任务保持不动</small>
+            </span>
+          </label>
+        </fieldset>
+        {state.preview.valid ? (
+          <p className="import-valid">文件校验通过，可以开始导入。</p>
+        ) : (
+          <div className="import-errors" role="alert">
+            <strong>发现 {state.preview.errors.length} 个问题</strong>
+            <ul>
+              {state.preview.errors.map((error, index) => (
+                <li key={`${error.path}-${index}`}>
+                  <code>{error.path}</code>
+                  <span>{error.message}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <footer className="modal-actions modal-actions--end">
+          <button className="button button--quiet" disabled={busy} onClick={onCancel}>
+            取消
+          </button>
+          <button
+            className="button button--primary"
+            disabled={busy || !state.preview.valid}
+            onClick={onSubmit}
+          >
+            开始导入
+          </button>
+        </footer>
+      </div>
+    </DialogShell>
+  );
+}
+
 interface ConfirmDialogProps {
   title: string;
   description: string;
   busy: boolean;
   onCancel: () => void;
   onConfirm: () => void;
+  confirmLabel?: string;
 }
 
 function ConfirmDialog({
@@ -1897,6 +2228,7 @@ function ConfirmDialog({
   busy,
   onCancel,
   onConfirm,
+  confirmLabel = "确认删除",
 }: ConfirmDialogProps) {
   return (
     <DialogShell title={title} onCancel={onCancel}>
@@ -1906,7 +2238,7 @@ function ConfirmDialog({
           取消
         </button>
         <button className="button button--danger" disabled={busy} onClick={onConfirm}>
-          确认删除
+          {confirmLabel}
         </button>
       </footer>
     </DialogShell>

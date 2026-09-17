@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::{path::Path, sync::Mutex};
 
 use serde::Serialize;
 use tauri::State;
@@ -10,6 +10,7 @@ use crate::{
         UpdateSubTaskInput, ViewSettings,
     },
     storage::{Storage, StorageError},
+    transfer::{ImportMode, ImportPreview, TransferResult},
 };
 
 pub struct AppState {
@@ -126,6 +127,55 @@ pub fn save_view_settings(
     settings: ViewSettings,
 ) -> Result<(), CommandError> {
     state.with_storage(|storage| storage.save_view_settings(&settings))
+}
+
+#[tauri::command(async)]
+pub fn analyze_import_content(
+    state: State<'_, AppState>,
+    content: String,
+    mode: ImportMode,
+) -> Result<ImportPreview, CommandError> {
+    state.with_storage(|storage| storage.analyze_import_content(&content, mode))
+}
+
+#[tauri::command(async)]
+pub fn analyze_import_file(
+    state: State<'_, AppState>,
+    path: String,
+    mode: ImportMode,
+) -> Result<ImportPreview, CommandError> {
+    state.with_storage(|storage| storage.analyze_import_file(Path::new(&path), mode))
+}
+
+#[tauri::command(async)]
+pub fn apply_import_content(
+    state: State<'_, AppState>,
+    content: String,
+    mode: ImportMode,
+) -> Result<TransferResult, CommandError> {
+    state.with_storage(|storage| storage.apply_import_content(&content, mode))
+}
+
+#[tauri::command(async)]
+pub fn apply_import_file(
+    state: State<'_, AppState>,
+    path: String,
+    mode: ImportMode,
+) -> Result<TransferResult, CommandError> {
+    state.with_storage(|storage| storage.apply_import_file(Path::new(&path), mode))
+}
+
+#[tauri::command(async)]
+pub fn export_json_content(state: State<'_, AppState>) -> Result<String, CommandError> {
+    state.with_storage(|storage| storage.export_json_content())
+}
+
+#[tauri::command(async)]
+pub fn export_json_file(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<TransferResult, CommandError> {
+    state.with_storage(|storage| storage.export_json_file(Path::new(&path)))
 }
 
 #[cfg(test)]

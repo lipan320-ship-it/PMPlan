@@ -11,6 +11,13 @@ import type {
   UpdateSubTaskInput,
   ViewSettings,
 } from "../domain/models";
+import type {
+  ExportResponse,
+  ImportMode,
+  ImportPreview,
+  ImportSource,
+  TransferResult,
+} from "../transfer/types";
 import type { StorageGateway } from "./gateway";
 
 export class TauriStorageGateway implements StorageGateway {
@@ -52,5 +59,44 @@ export class TauriStorageGateway implements StorageGateway {
 
   saveViewSettings(settings: ViewSettings): Promise<void> {
     return invoke("save_view_settings", { settings });
+  }
+
+  analyzeImport(source: ImportSource, mode: ImportMode): Promise<ImportPreview> {
+    return source.kind === "path"
+      ? invoke("analyze_import_file", { path: source.value, mode })
+      : invoke("analyze_import_content", { content: source.value, mode });
+  }
+
+  applyImport(source: ImportSource, mode: ImportMode): Promise<TransferResult> {
+    return source.kind === "path"
+      ? invoke("apply_import_file", { path: source.value, mode })
+      : invoke("apply_import_content", { content: source.value, mode });
+  }
+
+  async exportJson(destinationPath?: string): Promise<ExportResponse> {
+    if (destinationPath) {
+      const result = await invoke<TransferResult>("export_json_file", {
+        path: destinationPath,
+      });
+      return { content: null, result };
+    }
+    const content = await invoke<string>("export_json_content");
+    const parsed = JSON.parse(content) as {
+      tasks: Array<{ dependsOn?: string[]; subTasks?: unknown[] }>;
+    };
+    return {
+      content,
+      result: {
+        motherTaskCount: parsed.tasks.length,
+        subTaskCount: parsed.tasks.reduce(
+          (total, task) => total + (task.subTasks?.length ?? 0),
+          0,
+        ),
+        dependencyCount: parsed.tasks.reduce(
+          (total, task) => total + (task.dependsOn?.length ?? 0),
+          0,
+        ),
+      },
+    };
   }
 }

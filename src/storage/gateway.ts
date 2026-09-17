@@ -10,6 +10,13 @@ import type {
   UpdateSubTaskInput,
   ViewSettings,
 } from "../domain/models";
+import type {
+  ExportResponse,
+  ImportMode,
+  ImportPreview,
+  ImportSource,
+  TransferResult,
+} from "../transfer/types";
 
 export interface StorageGateway {
   loadBoard(): Promise<BoardSnapshot>;
@@ -22,4 +29,7 @@ export interface StorageGateway {
   deleteSubTask(id: string): Promise<void>;
   setDependencies(input: SetDependenciesInput): Promise<string[]>;
   saveViewSettings(settings: ViewSettings): Promise<void>;
+  analyzeImport(source: ImportSource, mode: ImportMode): Promise<ImportPreview>;
+  applyImport(source: ImportSource, mode: ImportMode): Promise<TransferResult>;
+  exportJson(destinationPath?: string): Promise<ExportResponse>;
 }
