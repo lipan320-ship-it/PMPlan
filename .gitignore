@@ -1,0 +1,35 @@
+# JavaScript / frontend
+node_modules/
+dist/
+coverage/
+
+# Tauri / Rust
+target/
+src-tauri/target/
+
+# Local databases and user data
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+backups/
+
+# Environment and logs
+.env
+.env.*
+!.env.example
+*.log
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Packaged applications
+*.msi
+*.exe
+*.appx
+*.dmg
+*.AppImage
