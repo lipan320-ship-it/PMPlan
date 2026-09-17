@@ -14,6 +14,7 @@
 - 补充母任务与子任务的最小管理范围和首次启动规则。
 - 接受由 Rust 存储层封装 bundled SQLite 的事务边界。
 - 建立 React、TypeScript、Vite 与 Tauri 2 工程壳、测试基线和本地图标资源。
+- 建立日期、排期和依赖领域规则，以及 Rust SQLite migration、事务、CRUD 与业务级 Tauri commands。
 
 ### Changed
 

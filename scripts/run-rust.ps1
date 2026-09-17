@@ -32,6 +32,7 @@ if (-not $installationPath) {
 
 $devCommandPath = Join-Path $installationPath 'Common7\Tools\VsDevCmd.bat'
 $cargoBin = Split-Path -Parent $cargoPath
+$vswhereDirectory = Split-Path -Parent $vswherePath
 $quotedManifest = '"' + $manifestPath + '"'
 $quotedCargo = '"' + $cargoPath + '"'
 $quotedNpm = '"' + $npmPath + '"'
@@ -46,7 +47,8 @@ if ($Action -eq 'check') {
   $taskCommand = "$quotedNpm run tauri -- build --debug --no-bundle"
 }
 
-$commandLine = 'call "' + $devCommandPath + '" -arch=x64 >nul' +
+$commandLine = 'set "PATH=' + $vswhereDirectory + ';%PATH%"' +
+  ' && call "' + $devCommandPath + '" -arch=x64 >nul' +
   ' && set "PATH=' + $cargoBin + ';%PATH%"' +
   ' && ' + $taskCommand
 

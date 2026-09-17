@@ -1,10 +1,34 @@
 #![allow(linker_messages)]
 
+mod commands;
+mod domain;
+mod storage;
+
+use tauri::Manager;
+
 pub const PRODUCT_NAME: &str = "工作规划时间板";
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            let database_path = app.path().app_local_data_dir()?.join("pmplan.sqlite3");
+            let storage = storage::Storage::open(&database_path)?;
+            app.manage(commands::AppState::new(storage));
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            commands::load_board,
+            commands::create_mother_task,
+            commands::rename_mother_task,
+            commands::set_mother_expanded,
+            commands::delete_mother_task,
+            commands::create_sub_task,
+            commands::update_sub_task,
+            commands::delete_sub_task,
+            commands::set_dependencies,
+            commands::save_view_settings,
+        ])
         .run(tauri::generate_context!())
         .expect("failed to run PMPlan desktop application");
 }
