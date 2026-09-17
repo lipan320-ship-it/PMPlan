@@ -39,6 +39,10 @@ function toEpochDay(value: DateOnly): number {
   return Math.floor(Date.UTC(year, month - 1, day) / millisecondsPerDay);
 }
 
+function fromEpochDay(epochDay: number): DateOnly {
+  return formatUtcDate(new Date(epochDay * millisecondsPerDay));
+}
+
 function formatUtcDate(date: Date): DateOnly {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
@@ -59,7 +63,7 @@ export function addDays(value: DateOnly, days: number): DateOnly {
   if (!Number.isInteger(days)) {
     throw new DomainError("invalid_day_offset", "日期偏移量必须是整数天。");
   }
-  return formatUtcDate(new Date((toEpochDay(value) + days) * millisecondsPerDay));
+  return fromEpochDay(toEpochDay(value) + days);
 }
 
 export function diffDays(start: DateOnly, end: DateOnly): number {
@@ -87,4 +91,31 @@ export function todayDateOnly(now = new Date()): DateOnly {
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+export function dayOfWeek(value: DateOnly): number {
+  return new Date(toEpochDay(value) * millisecondsPerDay).getUTCDay();
+}
+
+export function startOfWeek(value: DateOnly): DateOnly {
+  const mondayOffset = (dayOfWeek(value) + 6) % 7;
+  return addDays(value, -mondayOffset);
+}
+
+export function startOfMonth(value: DateOnly): DateOnly {
+  const { year, month } = parseParts(value);
+  return `${year}-${String(month).padStart(2, "0")}-01`;
+}
+
+export function addMonths(value: DateOnly, months: number): DateOnly {
+  if (!Number.isInteger(months)) {
+    throw new DomainError("invalid_month_offset", "月份偏移量必须是整数。");
+  }
+  const { year, month } = parseParts(value);
+  return formatUtcDate(new Date(Date.UTC(year, month - 1 + months, 1)));
+}
+
+export function daysInMonth(value: DateOnly): number {
+  const firstDay = startOfMonth(value);
+  return diffDays(firstDay, addMonths(firstDay, 1));
 }

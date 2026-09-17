@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   addDays,
+  addMonths,
   assertDateOnly,
+  daysInMonth,
   diffDays,
   inclusiveDuration,
+  startOfWeek,
 } from "./dateOnly";
 
 describe("date-only utilities", () => {
@@ -11,6 +14,13 @@ describe("date-only utilities", () => {
     expect(assertDateOnly("2028-02-29")).toBe("2028-02-29");
     expect(() => assertDateOnly("2027-02-29")).toThrow("并不存在");
     expect(() => assertDateOnly("09/17/2026")).toThrow("YYYY-MM-DD");
+  });
+
+  it("derives calendar periods from date-only values", () => {
+    expect(startOfWeek("2026-09-17")).toBe("2026-09-14");
+    expect(startOfWeek("2026-09-20")).toBe("2026-09-14");
+    expect(addMonths("2026-12-18", 1)).toBe("2027-01-01");
+    expect(daysInMonth("2028-02-10")).toBe(29);
   });
 
   it("adds whole days without local timezone arithmetic", () => {

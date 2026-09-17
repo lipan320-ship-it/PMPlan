@@ -54,7 +54,7 @@ CREATE INDEX idx_dependencies_source ON dependencies(depends_on_task_id, task_id
 CREATE TABLE view_settings (
     singleton_id INTEGER PRIMARY KEY NOT NULL DEFAULT 1 CHECK (singleton_id = 1),
     view_mode TEXT NOT NULL DEFAULT 'biweek' CHECK (view_mode IN ('week', 'biweek', 'month')),
-    anchor_date TEXT NOT NULL DEFAULT (date('now')),
+    anchor_date TEXT NOT NULL DEFAULT (date('now', 'localtime')),
     show_dependencies INTEGER NOT NULL DEFAULT 1 CHECK (show_dependencies IN (0, 1))
 );
 
