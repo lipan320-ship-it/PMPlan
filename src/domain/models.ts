@@ -48,6 +48,11 @@ export interface ReorderMotherTasksInput {
   orderedIds: string[];
 }
 
+export interface ReorderSubTasksInput {
+  motherId: string;
+  orderedIds: string[];
+}
+
 export interface CreateSubTaskInput {
   motherTaskId: string;
   name: string;

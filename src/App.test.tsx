@@ -191,6 +191,48 @@ describe("App", () => {
     ]);
   });
 
+  it("reorders sub tasks within a mother by dragging and persists the new order", async () => {
+    const gateway = new MemoryStorageGateway(createEmptyBoard());
+    const mother = await gateway.createMotherTask({ name: "母任务" });
+    await gateway.createSubTask({
+      motherTaskId: mother.id,
+      name: "子任务 A",
+      startDate: "2026-09-17",
+      endDate: null,
+    });
+    await gateway.createSubTask({
+      motherTaskId: mother.id,
+      name: "子任务 B",
+      startDate: "2026-09-18",
+      endDate: null,
+    });
+    await gateway.createSubTask({
+      motherTaskId: mother.id,
+      name: "子任务 C",
+      startDate: "2026-09-19",
+      endDate: null,
+    });
+    render(<App gateway={gateway} />);
+
+    const handles = await screen.findAllByTestId(/^subtask-drag-handle-/);
+    const handleC = handles[handles.length - 1];
+    if (!handleC) {
+      throw new Error("sub task drag handle missing");
+    }
+    fireEvent.pointerDown(handleC, { button: 0, clientY: 20, pointerId: 1 });
+    fireEvent.pointerMove(handleC, { clientY: -10, pointerId: 1 });
+    fireEvent.pointerUp(handleC, { clientY: -10, pointerId: 1 });
+
+    await waitFor(async () => {
+      expect(
+        (await gateway.loadBoard()).tasks[0].subTasks.map((subTask) => subTask.name),
+      ).toEqual(["子任务 C", "子任务 A", "子任务 B"]);
+    });
+    expect(
+      (await gateway.loadBoard()).tasks[0].subTasks.map((subTask) => subTask.sortOrder),
+    ).toEqual([0, 1, 2]);
+  });
+
   it("requires confirmation before deleting a mother task", async () => {
     const user = userEvent.setup();
     const gateway = new MemoryStorageGateway(createEmptyBoard());

@@ -220,6 +220,43 @@ impl Storage {
         Ok(())
     }
 
+    pub fn reorder_sub_tasks(
+        &mut self,
+        mother_id: &str,
+        ordered_ids: &[String],
+    ) -> Result<(), StorageError> {
+        let transaction = self.connection.transaction()?;
+        let existing_ids = {
+            let mut statement =
+                transaction.prepare("SELECT id FROM sub_tasks WHERE mother_task_id = ?1")?;
+            let ids = statement
+                .query_map(params![mother_id], |row| row.get::<_, String>(0))?
+                .collect::<Result<HashSet<_>, _>>()?;
+            ids
+        };
+        let ordered_id_set = ordered_ids.iter().collect::<HashSet<_>>();
+
+        if ordered_ids.len() != existing_ids.len()
+            || ordered_id_set.len() != existing_ids.len()
+            || ordered_ids.iter().any(|id| !existing_ids.contains(id))
+        {
+            return Err(StorageError::Validation(
+                "sub task order must include every sub task exactly once".to_owned(),
+            ));
+        }
+
+        for (sort_order, id) in ordered_ids.iter().enumerate() {
+            transaction.execute(
+                "UPDATE sub_tasks
+                 SET sort_order = ?2, updated_at = CURRENT_TIMESTAMP
+                 WHERE id = ?1 AND mother_task_id = ?3",
+                params![id, sort_order as i64, mother_id],
+            )?;
+        }
+        transaction.commit()?;
+        Ok(())
+    }
+
     pub fn delete_mother_task(&mut self, id: &str) -> Result<(), StorageError> {
         let transaction = self.connection.transaction()?;
         let affected = transaction.execute("DELETE FROM mother_tasks WHERE id = ?1", [id])?;
@@ -672,6 +709,54 @@ mod tests {
                 .map(|task| task.name.as_str())
                 .collect::<Vec<_>>(),
             vec!["C", "A", "B"]
+        );
+    }
+
+    #[test]
+    fn reorders_sub_tasks_within_mother_and_rejects_incomplete_orders() {
+        let mut storage = Storage::open_in_memory().expect("open database");
+        let mother = storage.create_mother_task("Mother").expect("create mother");
+        let sub_a = storage
+            .create_sub_task(&sub_task_input(&mother.id))
+            .expect("create A");
+        let sub_b = storage
+            .create_sub_task(&sub_task_input(&mother.id))
+            .expect("create B");
+        let sub_c = storage
+            .create_sub_task(&sub_task_input(&mother.id))
+            .expect("create C");
+
+        storage
+            .reorder_sub_tasks(
+                &mother.id,
+                &[sub_c.id.clone(), sub_a.id.clone(), sub_b.id.clone()],
+            )
+            .expect("reorder sub tasks");
+        let sub_tasks = storage.load_board().expect("load reordered board").tasks[0]
+            .sub_tasks
+            .clone();
+        assert_eq!(
+            sub_tasks.iter().map(|s| s.id.as_str()).collect::<Vec<_>>(),
+            vec![sub_c.id.as_str(), sub_a.id.as_str(), sub_b.id.as_str()]
+        );
+        assert_eq!(
+            sub_tasks.iter().map(|s| s.sort_order).collect::<Vec<_>>(),
+            vec![0, 1, 2]
+        );
+
+        let error = storage
+            .reorder_sub_tasks(&mother.id, &[sub_a.id.clone(), sub_b.id.clone()])
+            .expect_err("incomplete order must fail");
+        assert_eq!(error.code(), "validation_error");
+        let unchanged_board = storage.load_board().expect("load unchanged board");
+        let unchanged = unchanged_board.tasks[0]
+            .sub_tasks
+            .iter()
+            .map(|s| s.id.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            unchanged,
+            vec![sub_c.id.as_str(), sub_a.id.as_str(), sub_b.id.as_str()]
         );
     }
 

@@ -9,6 +9,7 @@
 | [2026-09-17](2026-09-17-repository-documentation-baseline.md) | 建立仓库与文档治理基线 | Completed |
 | [2026-09-17](2026-09-17-v0.1-implementation-planning.md) | 制定 v0.1 开发实施计划 | Completed |
 | [2026-09-17](2026-09-17-v0.1-development.md) | v0.1.0 开发 | In Progress |
+| [2026-09-18](2026-09-18-subtask-reorder.md) | 子任务在母任务内拖动排序 | Completed |
 
 ## 命名规则
 

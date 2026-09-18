@@ -6,7 +6,7 @@ use tauri::State;
 use crate::{
     domain::{
         BoardSnapshot, CreateMotherTaskInput, CreateSubTaskInput, MotherTask,
-        RenameMotherTaskInput, ReorderMotherTasksInput, SetDependenciesInput,
+        RenameMotherTaskInput, ReorderMotherTasksInput, ReorderSubTasksInput, SetDependenciesInput,
         SetMotherExpandedInput, SubTask, UpdateSubTaskInput, ViewSettings,
     },
     storage::{Storage, StorageError},
@@ -93,6 +93,14 @@ pub fn reorder_mother_tasks(
     input: ReorderMotherTasksInput,
 ) -> Result<(), CommandError> {
     state.with_storage(|storage| storage.reorder_mother_tasks(&input.ordered_ids))
+}
+
+#[tauri::command(async)]
+pub fn reorder_sub_tasks(
+    state: State<'_, AppState>,
+    input: ReorderSubTasksInput,
+) -> Result<(), CommandError> {
+    state.with_storage(|storage| storage.reorder_sub_tasks(&input.mother_id, &input.ordered_ids))
 }
 
 #[tauri::command(async)]

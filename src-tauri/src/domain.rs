@@ -92,6 +92,13 @@ pub struct ReorderMotherTasksInput {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ReorderSubTasksInput {
+    pub mother_id: String,
+    pub ordered_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateSubTaskInput {
     pub mother_task_id: String,
     pub name: String,

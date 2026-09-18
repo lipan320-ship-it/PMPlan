@@ -89,6 +89,21 @@ interface ActiveMotherDrag {
   suppressClick: boolean;
 }
 
+type SubTaskDropPosition = "before" | "after";
+
+interface SubTaskDropTarget {
+  id: string;
+  position: SubTaskDropPosition;
+}
+
+interface ActiveSubTaskDrag {
+  pointerId: number;
+  motherId: string;
+  subTaskId: string;
+  startY: number;
+  moved: boolean;
+}
+
 interface ToastState {
   tone: "success" | "error";
   message: string;
@@ -206,6 +221,45 @@ function reorderMotherTasks(
   const reordered = [...remaining];
   reordered.splice(insertionIndex, 0, draggedTask);
   return reordered.map((task, sortOrder) => ({ ...task, sortOrder }));
+}
+
+function reorderSubTasksWithinMother(
+  tasks: MotherTask[],
+  motherId: string,
+  draggedId: string,
+  targetId: string,
+  position: SubTaskDropPosition,
+): MotherTask[] {
+  if (draggedId === targetId) {
+    return tasks;
+  }
+
+  const mother = tasks.find((task) => task.id === motherId);
+  if (!mother) {
+    return tasks;
+  }
+
+  const draggedSubTask = mother.subTasks.find((subTask) => subTask.id === draggedId);
+  if (!draggedSubTask) {
+    return tasks;
+  }
+
+  const remaining = mother.subTasks.filter((subTask) => subTask.id !== draggedId);
+  const targetIndex = remaining.findIndex((subTask) => subTask.id === targetId);
+  if (targetIndex < 0) {
+    return tasks;
+  }
+
+  const insertionIndex = position === "after" ? targetIndex + 1 : targetIndex;
+  const reorderedSubTasks = [...remaining];
+  reorderedSubTasks.splice(insertionIndex, 0, draggedSubTask);
+  const nextSubTasks = reorderedSubTasks.map((subTask, sortOrder) => ({
+    ...subTask,
+    sortOrder,
+  }));
+  return tasks.map((task) =>
+    task.id === motherId ? { ...task, subTasks: nextSubTasks } : task,
+  );
 }
 
 function formatRange(range: ViewRange): string {
@@ -416,6 +470,57 @@ export function BoardPage({ gateway }: BoardPageProps) {
         orderedIds: reorderedTasks.map((task) => task.id),
       });
       setToast({ tone: "success", message: "母任务排序已更新" });
+    } catch (error) {
+      setBoard((current) =>
+        current ? { ...current, tasks: originalTasks } : current,
+      );
+      setToast({ tone: "error", message: messageFromError(error) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleReorderSubTask = async (
+    motherId: string,
+    draggedId: string,
+    targetId: string,
+    position: SubTaskDropPosition,
+  ) => {
+    if (!board) {
+      return;
+    }
+
+    const originalTasks = board.tasks;
+    const reorderedTasks = reorderSubTasksWithinMother(
+      originalTasks,
+      motherId,
+      draggedId,
+      targetId,
+      position,
+    );
+    const mother = originalTasks.find((task) => task.id === motherId);
+    const reorderedMother = reorderedTasks.find((task) => task.id === motherId);
+    if (
+      !mother ||
+      !reorderedMother ||
+      reorderedTasks === originalTasks ||
+      reorderedMother.subTasks.every(
+        (subTask, index) => subTask.id === mother.subTasks[index]?.id,
+      )
+    ) {
+      return;
+    }
+
+    setBoard((current) =>
+      current ? { ...current, tasks: reorderedTasks } : current,
+    );
+    setBusy(true);
+    try {
+      await gateway.reorderSubTasks({
+        motherId,
+        orderedIds: reorderedMother.subTasks.map((subTask) => subTask.id),
+      });
+      setToast({ tone: "success", message: "子任务排序已更新" });
     } catch (error) {
       setBoard((current) =>
         current ? { ...current, tasks: originalTasks } : current,
@@ -1032,6 +1137,9 @@ export function BoardPage({ gateway }: BoardPageProps) {
           onReorderMother={(draggedId, targetId, position) =>
             void handleReorderMother(draggedId, targetId, position)
           }
+          onReorderSubTask={(motherId, draggedId, targetId, position) =>
+            void handleReorderSubTask(motherId, draggedId, targetId, position)
+          }
           onSetDependencies={setDependencyDialog}
           onQuickAdd={(mother, initialDate) =>
             setSubTaskDialog({ mode: "create", mother, initialDate })
@@ -1229,6 +1337,12 @@ interface TimelineBoardProps {
     targetId: string,
     position: MotherDropPosition,
   ) => void;
+  onReorderSubTask: (
+    motherId: string,
+    draggedId: string,
+    targetId: string,
+    position: SubTaskDropPosition,
+  ) => void;
   onSetDependencies: (mother: MotherTask) => void;
   onAddSubTask: (mother: MotherTask) => void;
   onEditSubTask: (mother: MotherTask, subTask: SubTask) => void;
@@ -1252,6 +1366,7 @@ function TimelineBoard({
   onEditMother,
   onRequestDeleteMother,
   onReorderMother,
+  onReorderSubTask,
   onSetDependencies,
   onAddSubTask,
   onEditSubTask,
@@ -1280,6 +1395,11 @@ function TimelineBoard({
   const suppressedMotherClickRef = useRef<string | null>(null);
   const [motherDropTarget, setMotherDropTarget] =
     useState<MotherDropTarget | null>(null);
+  const [draggedSubTaskId, setDraggedSubTaskId] = useState<string | null>(null);
+  const activeSubTaskDragRef = useRef<ActiveSubTaskDrag | null>(null);
+  const subTaskDropTargetRef = useRef<SubTaskDropTarget | null>(null);
+  const [subTaskDropTarget, setSubTaskDropTarget] =
+    useState<SubTaskDropTarget | null>(null);
   const conflictMotherIds = useMemo(
     () => new Set(conflicts.map((conflict) => conflict.taskId)),
     [conflicts],
@@ -1403,6 +1523,88 @@ function TimelineBoard({
     event.preventDefault();
   };
 
+  const clearSubTaskDrag = () => {
+    activeSubTaskDragRef.current = null;
+    subTaskDropTargetRef.current = null;
+    setDraggedSubTaskId(null);
+    setSubTaskDropTarget(null);
+  };
+
+  const beginSubTaskDrag = (
+    mother: MotherTask,
+    subTask: SubTask,
+    event: ReactPointerEvent<HTMLElement>,
+  ) => {
+    if (busy || event.button !== 0) {
+      return;
+    }
+    activeSubTaskDragRef.current = {
+      pointerId: event.pointerId,
+      motherId: mother.id,
+      subTaskId: subTask.id,
+      startY: event.clientY,
+      moved: false,
+    };
+    setDraggedSubTaskId(subTask.id);
+    setSubTaskDropTarget(null);
+    if (typeof event.currentTarget.setPointerCapture === "function") {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+    event.preventDefault();
+  };
+
+  const updateSubTaskDrag = (event: ReactPointerEvent<HTMLElement>) => {
+    const active = activeSubTaskDragRef.current;
+    if (!active || active.pointerId !== event.pointerId) {
+      return;
+    }
+    if (!active.moved && Math.abs(event.clientY - active.startY) < 4) {
+      return;
+    }
+    active.moved = true;
+    event.preventDefault();
+
+    const subTaskRows = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        `.task-row--subtask[data-sub-row-id][data-mother-row-id="${active.motherId}"]`,
+      ),
+    ).filter((element) => element.dataset.subRowId !== active.subTaskId);
+    let nextTarget: SubTaskDropTarget | null = null;
+    for (const element of subTaskRows) {
+      const id = element.dataset.subRowId;
+      if (!id) {
+        continue;
+      }
+      const rectangle = element.getBoundingClientRect();
+      if (event.clientY < rectangle.top + rectangle.height / 2) {
+        nextTarget = { id, position: "before" };
+        break;
+      }
+      nextTarget = { id, position: "after" };
+    }
+    subTaskDropTargetRef.current = nextTarget;
+    setSubTaskDropTarget(nextTarget);
+  };
+
+  const finishSubTaskDrag = (event: ReactPointerEvent<HTMLElement>) => {
+    const active = activeSubTaskDragRef.current;
+    if (!active || active.pointerId !== event.pointerId) {
+      return;
+    }
+    if (
+      typeof event.currentTarget.hasPointerCapture === "function" &&
+      event.currentTarget.hasPointerCapture(event.pointerId)
+    ) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    const target = subTaskDropTargetRef.current;
+    if (active.moved && target) {
+      onReorderSubTask(active.motherId, active.subTaskId, target.id, target.position);
+    }
+    clearSubTaskDrag();
+    event.preventDefault();
+  };
+
   return (
     <section className="board-frame" aria-label="工作规划时间板">
       <div className="board-scroll" ref={scrollRef}>
@@ -1426,6 +1628,12 @@ function TimelineBoard({
                 onMotherPointerDown={beginMotherDrag}
                 onMotherPointerMove={updateMotherDrag}
                 onMotherPointerUp={finishMotherDrag}
+                draggedSubTaskId={draggedSubTaskId}
+                subTaskDropTarget={subTaskDropTarget}
+                onSubTaskPointerCancel={clearSubTaskDrag}
+                onSubTaskPointerDown={beginSubTaskDrag}
+                onSubTaskPointerMove={updateSubTaskDrag}
+                onSubTaskPointerUp={finishSubTaskDrag}
                 onSetDependencies={onSetDependencies}
                 onToggleMother={(mother) => {
                   if (suppressedMotherClickRef.current === mother.id) {
@@ -1525,6 +1733,16 @@ interface TaskTreeRowProps {
   onMotherPointerMove: (event: ReactPointerEvent<HTMLElement>) => void;
   onMotherPointerUp: (event: ReactPointerEvent<HTMLElement>) => void;
   onMotherPointerCancel: () => void;
+  draggedSubTaskId: string | null;
+  subTaskDropTarget: SubTaskDropTarget | null;
+  onSubTaskPointerDown: (
+    mother: MotherTask,
+    subTask: SubTask,
+    event: ReactPointerEvent<HTMLElement>,
+  ) => void;
+  onSubTaskPointerMove: (event: ReactPointerEvent<HTMLElement>) => void;
+  onSubTaskPointerUp: (event: ReactPointerEvent<HTMLElement>) => void;
+  onSubTaskPointerCancel: () => void;
 }
 
 type MotherActionIconName = "edit" | "dependency" | "add" | "delete";
@@ -1580,6 +1798,12 @@ function TaskTreeRow({
   onMotherPointerMove,
   onMotherPointerUp,
   onMotherPointerCancel,
+  draggedSubTaskId,
+  subTaskDropTarget,
+  onSubTaskPointerDown,
+  onSubTaskPointerMove,
+  onSubTaskPointerUp,
+  onSubTaskPointerCancel,
 }: TaskTreeRowProps) {
   const focusClass = focusedMotherId
     ? relatedMotherIds.has(row.mother.id)
@@ -1712,23 +1936,59 @@ function TaskTreeRow({
     );
   }
 
-  return (
-    <div className={`task-row task-row--subtask ${focusClass}`}>
-      <span className="tree-branch" aria-hidden="true" />
-      <button
-        className="task-name"
-        disabled={busy}
-        onClick={() => onEditSubTask(row.mother, row.subTask)}
-        title="编辑子任务"
+  if (row.kind === "subTask") {
+    const subDropPosition = subTaskDropTarget?.id === row.subTask.id
+      ? subTaskDropTarget.position
+      : null;
+    const subDragClass = [
+      draggedSubTaskId === row.subTask.id ? "is-dragging" : "",
+      subDropPosition ? `is-drop-${subDropPosition}` : "",
+    ].filter(Boolean).join(" ");
+    return (
+      <div
+        className={`task-row task-row--subtask ${focusClass} ${subDragClass}`}
+        data-sub-row-id={row.subTask.id}
+        data-mother-row-id={row.mother.id}
       >
-        {row.subTask.name}
-      </button>
-      <span className="subtask-dates">
-        {formatShortDate(row.subTask.startDate)}
-        {row.subTask.endDate ? `–${formatShortDate(row.subTask.endDate)}` : ""}
-      </span>
-    </div>
-  );
+        <span
+          aria-hidden="true"
+          className="subtask-drag-handle"
+          data-testid={`subtask-drag-handle-${row.subTask.id}`}
+          onPointerCancel={onSubTaskPointerCancel}
+          onPointerDown={(event) =>
+            onSubTaskPointerDown(row.mother, row.subTask, event)
+          }
+          onPointerMove={onSubTaskPointerMove}
+          onPointerUp={onSubTaskPointerUp}
+          title="按住拖动调整子任务顺序"
+        >
+          <svg viewBox="0 0 12 18">
+            <circle cx="3" cy="4" r="1.2" />
+            <circle cx="9" cy="4" r="1.2" />
+            <circle cx="3" cy="9" r="1.2" />
+            <circle cx="9" cy="9" r="1.2" />
+            <circle cx="3" cy="14" r="1.2" />
+            <circle cx="9" cy="14" r="1.2" />
+          </svg>
+        </span>
+        <span className="tree-branch" aria-hidden="true" />
+        <button
+          className="task-name"
+          disabled={busy}
+          onClick={() => onEditSubTask(row.mother, row.subTask)}
+          title="编辑子任务"
+        >
+          {row.subTask.name}
+        </button>
+        <span className="subtask-dates">
+          {formatShortDate(row.subTask.startDate)}
+          {row.subTask.endDate ? `–${formatShortDate(row.subTask.endDate)}` : ""}
+        </span>
+      </div>
+    );
+  }
+
+  return null;
 }
 
 interface TimelineRowProps {

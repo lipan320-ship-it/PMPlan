@@ -4,6 +4,7 @@ import type {
   CreateSubTaskInput,
   MotherTask,
   ReorderMotherTasksInput,
+  ReorderSubTasksInput,
   RenameMotherTaskInput,
   SetDependenciesInput,
   SetMotherExpandedInput,
@@ -25,6 +26,7 @@ export interface StorageGateway {
   renameMotherTask(input: RenameMotherTaskInput): Promise<void>;
   setMotherExpanded(input: SetMotherExpandedInput): Promise<void>;
   reorderMotherTasks(input: ReorderMotherTasksInput): Promise<void>;
+  reorderSubTasks(input: ReorderSubTasksInput): Promise<void>;
   deleteMotherTask(id: string): Promise<void>;
   createSubTask(input: CreateSubTaskInput): Promise<SubTask>;
   updateSubTask(input: UpdateSubTaskInput): Promise<void>;

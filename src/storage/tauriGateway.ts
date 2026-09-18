@@ -5,6 +5,7 @@ import type {
   CreateSubTaskInput,
   MotherTask,
   ReorderMotherTasksInput,
+  ReorderSubTasksInput,
   RenameMotherTaskInput,
   SetDependenciesInput,
   SetMotherExpandedInput,
@@ -40,6 +41,10 @@ export class TauriStorageGateway implements StorageGateway {
 
   reorderMotherTasks(input: ReorderMotherTasksInput): Promise<void> {
     return invoke("reorder_mother_tasks", { input });
+  }
+
+  reorderSubTasks(input: ReorderSubTasksInput): Promise<void> {
+    return invoke("reorder_sub_tasks", { input });
   }
 
   deleteMotherTask(id: string): Promise<void> {

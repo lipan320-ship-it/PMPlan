@@ -66,6 +66,50 @@ describe("MemoryStorageGateway", () => {
     ]);
   });
 
+  it("reorders sub tasks within a mother and rejects incomplete order data", async () => {
+    const gateway = new MemoryStorageGateway(emptyBoard);
+    const mother = await gateway.createMotherTask({ name: "M" });
+    const subA = await gateway.createSubTask({
+      motherTaskId: mother.id,
+      name: "A",
+      startDate: "2026-09-17",
+      endDate: null,
+    });
+    const subB = await gateway.createSubTask({
+      motherTaskId: mother.id,
+      name: "B",
+      startDate: "2026-09-18",
+      endDate: null,
+    });
+    const subC = await gateway.createSubTask({
+      motherTaskId: mother.id,
+      name: "C",
+      startDate: "2026-09-19",
+      endDate: null,
+    });
+
+    await gateway.reorderSubTasks({
+      motherId: mother.id,
+      orderedIds: [subC.id, subA.id, subB.id],
+    });
+    const reordered = await gateway.loadBoard();
+    expect(reordered.tasks[0].subTasks.map((subTask) => subTask.name)).toEqual([
+      "C",
+      "A",
+      "B",
+    ]);
+    expect(reordered.tasks[0].subTasks.map((subTask) => subTask.sortOrder)).toEqual([
+      0, 1, 2,
+    ]);
+
+    await expect(
+      gateway.reorderSubTasks({ motherId: mother.id, orderedIds: [subA.id, subB.id] }),
+    ).rejects.toThrow("必须完整包含");
+    expect(
+      (await gateway.loadBoard()).tasks[0].subTasks.map((subTask) => subTask.name),
+    ).toEqual(["C", "A", "B"]);
+  });
+
   it("previews, applies and exports JSON without partial invalid writes", async () => {
     const gateway = new MemoryStorageGateway(emptyBoard);
     const valid = JSON.stringify({

@@ -538,6 +538,61 @@ input:focus-visible {
   fill: currentcolor;
 }
 
+.subtask-drag-handle {
+  display: grid;
+  width: 16px;
+  height: 24px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: #9aa7ba;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.subtask-drag-handle:hover {
+  color: var(--primary);
+}
+
+.subtask-drag-handle:active {
+  cursor: grabbing;
+}
+
+.subtask-drag-handle svg {
+  width: 10px;
+  height: 18px;
+  fill: currentcolor;
+}
+
+.task-row--subtask {
+  position: relative;
+}
+
+.task-row--subtask.is-dragging {
+  opacity: 0.5;
+}
+
+.task-row--subtask.is-drop-before::before,
+.task-row--subtask.is-drop-after::after {
+  z-index: 8;
+  position: absolute;
+  right: 8px;
+  left: 8px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--primary);
+  box-shadow: 0 0 0 2px rgb(37 91 215 / 12%);
+  content: "";
+}
+
+.task-row--subtask.is-drop-before::before {
+  top: -2px;
+}
+
+.task-row--subtask.is-drop-after::after {
+  bottom: -2px;
+}
+
 .tree-toggle {
   display: grid;
   width: 28px;

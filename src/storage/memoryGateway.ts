@@ -7,6 +7,7 @@ import {
   type CreateSubTaskInput,
   type MotherTask,
   type ReorderMotherTasksInput,
+  type ReorderSubTasksInput,
   type RenameMotherTaskInput,
   type SetDependenciesInput,
   type SetMotherExpandedInput,
@@ -82,6 +83,27 @@ export class MemoryStorageGateway implements StorageGateway {
     const tasksById = new Map(this.board.tasks.map((task) => [task.id, task]));
     this.board.tasks = input.orderedIds.map((id, sortOrder) => ({
       ...tasksById.get(id)!,
+      sortOrder,
+    }));
+  }
+
+  async reorderSubTasks(input: ReorderSubTasksInput): Promise<void> {
+    const mother = this.requireMother(input.motherId);
+    const uniqueIds = new Set(input.orderedIds);
+    if (
+      input.orderedIds.length !== mother.subTasks.length ||
+      uniqueIds.size !== mother.subTasks.length ||
+      input.orderedIds.some((id) => !mother.subTasks.some((subTask) => subTask.id === id))
+    ) {
+      throw new DomainError(
+        "validation_error",
+        "子任务排序必须完整包含每个子任务且不能重复。",
+      );
+    }
+
+    const subTasksById = new Map(mother.subTasks.map((subTask) => [subTask.id, subTask]));
+    mother.subTasks = input.orderedIds.map((id, sortOrder) => ({
+      ...subTasksById.get(id)!,
       sortOrder,
     }));
   }

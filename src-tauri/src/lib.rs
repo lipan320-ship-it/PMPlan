@@ -25,6 +25,7 @@ pub fn run() {
             commands::rename_mother_task,
             commands::set_mother_expanded,
             commands::reorder_mother_tasks,
+            commands::reorder_sub_tasks,
             commands::delete_mother_task,
             commands::create_sub_task,
             commands::update_sub_task,
