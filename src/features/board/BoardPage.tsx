@@ -357,6 +357,7 @@ export function BoardPage({ gateway }: BoardPageProps) {
   const [viewportWidth, setViewportWidth] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const viewSettingsRef = useRef<ViewSettings | null>(null);
 
   const handleTaskColumnWidthChange = (width: number) => {
@@ -410,7 +411,12 @@ export function BoardPage({ gateway }: BoardPageProps) {
     viewSettingsRef.current = board?.viewSettings ?? null;
   }, [board?.viewSettings]);
 
+  // 滚动容器要等看板数据加载完成后才渲染，因此依赖 board 出现后再挂载观察器；
+  // 否则 effect 只在空态时跑一次，viewportWidth 恒为 0，宽屏下时间轴不会铺满。
   useEffect(() => {
+    if (resizeObserverRef.current) {
+      return;
+    }
     const element = scrollContainerRef.current;
     if (!element || typeof ResizeObserver === "undefined") {
       return;
@@ -419,8 +425,10 @@ export function BoardPage({ gateway }: BoardPageProps) {
       setViewportWidth(entry.contentRect.width);
     });
     observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
+    resizeObserverRef.current = observer;
+  }, [board]);
+
+  useEffect(() => () => resizeObserverRef.current?.disconnect(), []);
 
   useEffect(() => {
     if (!toast) {
@@ -1814,7 +1822,7 @@ function TimelineBoard({
       }
       event.preventDefault();
       wheelDeltaRef.current += horizontal;
-      const days = Math.trunc(-wheelDeltaRef.current / columnWidth);
+      const days = Math.trunc(wheelDeltaRef.current / columnWidth);
       if (days === 0) {
         return;
       }

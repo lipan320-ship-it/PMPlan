@@ -103,6 +103,33 @@ describe("timeline panning", () => {
     expect(snapshot.viewSettings.anchorDate).toBe("2026-10-25");
   });
 
+  it("pans forward with shift + wheel down and persists silently", async () => {
+    const gateway = await createGateway("2026-10-25");
+    const { container } = render(<App gateway={gateway} />);
+
+    await screen.findByText("10/31");
+    const column = container.querySelector(".timeline-column") as HTMLElement;
+
+    fireEvent.wheel(column, { deltaY: 148, shiftKey: true });
+    await waitFor(() => {
+      expect(screen.getByText("10/27")).toBeInTheDocument();
+    });
+
+    fireEvent.wheel(column, { deltaY: -148, shiftKey: true });
+    await waitFor(() => {
+      expect(screen.getByText("10/25")).toBeInTheDocument();
+    });
+
+    await waitFor(
+      async () => {
+        const snapshot = await gateway.loadBoard();
+        expect(snapshot.viewSettings.anchorDate).toBe("2026-10-25");
+      },
+      { timeout: 2000 },
+    );
+    expect(screen.queryByText("视图设置已保存")).toBeNull();
+  });
+
   it("pages by half of the window and persists silently", async () => {
     const gateway = await createGateway("2026-10-25");
     render(<App gateway={gateway} />);

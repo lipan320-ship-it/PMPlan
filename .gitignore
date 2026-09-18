@@ -37,3 +37,4 @@ Thumbs.db
 
 # Workspace-local temporary files
 .tmp/
+.codebuddy/
