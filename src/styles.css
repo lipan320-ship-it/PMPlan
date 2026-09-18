@@ -404,12 +404,30 @@ input:focus-visible {
 .task-column__header {
   display: flex;
   align-items: center;
-  padding: 0 18px;
+  justify-content: space-between;
+  padding: 0 0 0 18px;
   color: var(--text-muted);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.task-column__resize-handle {
+  width: 12px;
+  height: 100%;
+  flex: 0 0 auto;
+  border-left: 1px solid transparent;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.task-column__resize-handle:hover,
+.task-column__resize-handle:focus-visible,
+.task-column__resize-handle:active {
+  border-left-color: var(--primary);
+  background: var(--primary-soft);
+  outline: 0;
 }
 
 .timeline-column {
@@ -1442,10 +1460,6 @@ input:focus-visible {
 }
 
 @media (max-width: 1080px) {
-  :root {
-    --task-column-width: 310px;
-  }
-
   .planner-toolbar {
     align-items: flex-start;
     flex-direction: column;
@@ -1466,10 +1480,6 @@ input:focus-visible {
 }
 
 @media (max-width: 700px) {
-  :root {
-    --task-column-width: 275px;
-  }
-
   .planner-header,
   .planner-toolbar {
     padding-inline: 12px;

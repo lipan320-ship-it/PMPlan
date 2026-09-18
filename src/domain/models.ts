@@ -1,6 +1,17 @@
 export type DateOnly = string;
 export type ViewMode = "week" | "biweek" | "month";
 
+export const DEFAULT_TASK_COLUMN_WIDTH = 348;
+export const MIN_TASK_COLUMN_WIDTH = 240;
+export const MAX_TASK_COLUMN_WIDTH = 600;
+
+export function clampTaskColumnWidth(value: number): number {
+  if (!Number.isFinite(value)) {
+    return DEFAULT_TASK_COLUMN_WIDTH;
+  }
+  return Math.round(Math.min(MAX_TASK_COLUMN_WIDTH, Math.max(MIN_TASK_COLUMN_WIDTH, value)));
+}
+
 export interface SubTask {
   id: string;
   motherTaskId: string;
@@ -23,6 +34,7 @@ export interface ViewSettings {
   viewMode: ViewMode;
   anchorDate: DateOnly;
   showDependencies: boolean;
+  taskColumnWidth: number;
 }
 
 export interface BoardSnapshot {

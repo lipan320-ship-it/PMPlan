@@ -26,6 +26,7 @@ function createLargeBoard(): BoardSnapshot {
       viewMode: "biweek",
       anchorDate: "2026-09-17",
       showDependencies: true,
+      taskColumnWidth: 348,
     },
   };
 }

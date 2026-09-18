@@ -1,6 +1,9 @@
 import { isTauri } from "@tauri-apps/api/core";
 import { todayDateOnly } from "../domain/dateOnly";
-import type { BoardSnapshot } from "../domain/models";
+import {
+  DEFAULT_TASK_COLUMN_WIDTH,
+  type BoardSnapshot,
+} from "../domain/models";
 import type { StorageGateway } from "../storage/gateway";
 import { MemoryStorageGateway } from "../storage/memoryGateway";
 import { TauriStorageGateway } from "../storage/tauriGateway";
@@ -12,6 +15,7 @@ export function createEmptyBoard(): BoardSnapshot {
       viewMode: "biweek",
       anchorDate: todayDateOnly(),
       showDependencies: true,
+      taskColumnWidth: DEFAULT_TASK_COLUMN_WIDTH,
     },
   };
 }

@@ -60,7 +60,10 @@ CREATE TABLE view_settings (
 
 INSERT INTO view_settings(singleton_id) VALUES (1);
 "#;
-const LATEST_SCHEMA_VERSION: i64 = 1;
+const LATEST_SCHEMA_VERSION: i64 = 2;
+const DEFAULT_TASK_COLUMN_WIDTH: i64 = 348;
+const MIN_TASK_COLUMN_WIDTH: i64 = 240;
+const MAX_TASK_COLUMN_WIDTH: i64 = 600;
 
 #[derive(Debug, Error)]
 pub enum StorageError {
@@ -321,12 +324,13 @@ impl Storage {
         parse_date(&settings.anchor_date)?;
         self.connection.execute(
             "UPDATE view_settings
-             SET view_mode = ?1, anchor_date = ?2, show_dependencies = ?3
+             SET view_mode = ?1, anchor_date = ?2, show_dependencies = ?3, task_column_width = ?4
              WHERE singleton_id = 1",
             params![
                 settings.view_mode.as_str(),
                 settings.anchor_date,
-                settings.show_dependencies
+                settings.show_dependencies,
+                clamp_task_column_width(settings.task_column_width)
             ],
         )?;
         Ok(())
@@ -366,25 +370,28 @@ impl Storage {
     fn load_view_settings(&self) -> Result<ViewSettings, StorageError> {
         self.connection
             .query_row(
-                "SELECT view_mode, anchor_date, show_dependencies
+                "SELECT view_mode, anchor_date, show_dependencies, task_column_width
                  FROM view_settings WHERE singleton_id = 1",
                 [],
                 |row| {
                     let view_mode: String = row.get(0)?;
-                    Ok((view_mode, row.get(1)?, row.get(2)?))
+                    Ok((view_mode, row.get(1)?, row.get(2)?, row.get(3)?))
                 },
             )
             .map_err(StorageError::from)
-            .and_then(|(view_mode, anchor_date, show_dependencies)| {
-                let view_mode = ViewMode::parse(&view_mode).ok_or_else(|| {
-                    StorageError::Validation("stored view mode is invalid".to_owned())
-                })?;
-                Ok(ViewSettings {
-                    view_mode,
-                    anchor_date,
-                    show_dependencies,
-                })
-            })
+            .and_then(
+                |(view_mode, anchor_date, show_dependencies, task_column_width)| {
+                    let view_mode = ViewMode::parse(&view_mode).ok_or_else(|| {
+                        StorageError::Validation("stored view mode is invalid".to_owned())
+                    })?;
+                    Ok(ViewSettings {
+                        view_mode,
+                        anchor_date,
+                        show_dependencies,
+                        task_column_width: clamp_task_column_width(task_column_width),
+                    })
+                },
+            )
     }
 }
 
@@ -417,7 +424,28 @@ fn apply_migrations(connection: &mut Connection) -> Result<(), StorageError> {
         )?;
         transaction.commit()?;
     }
+
+    let current_version = connection.query_row(
+        "SELECT COALESCE(MAX(version), 0) FROM schema_migrations",
+        [],
+        |row| row.get::<_, i64>(0),
+    )?;
+    if current_version < 2 {
+        let transaction = connection.transaction()?;
+        transaction.execute_batch(&format!(
+            "ALTER TABLE view_settings ADD COLUMN task_column_width INTEGER NOT NULL DEFAULT {DEFAULT_TASK_COLUMN_WIDTH} CHECK (task_column_width BETWEEN {MIN_TASK_COLUMN_WIDTH} AND {MAX_TASK_COLUMN_WIDTH})"
+        ))?;
+        transaction.execute(
+            "INSERT INTO schema_migrations(version, description) VALUES (2, 'task column width')",
+            [],
+        )?;
+        transaction.commit()?;
+    }
     Ok(())
+}
+
+fn clamp_task_column_width(value: i64) -> i64 {
+    value.clamp(MIN_TASK_COLUMN_WIDTH, MAX_TASK_COLUMN_WIDTH)
 }
 
 fn validate_name(value: &str) -> Result<String, StorageError> {
@@ -763,12 +791,26 @@ mod tests {
     }
 
     #[test]
+    fn defaults_task_column_width_for_new_boards() {
+        let storage = Storage::open_in_memory().expect("open database");
+        assert_eq!(
+            storage
+                .load_board()
+                .expect("load board")
+                .view_settings
+                .task_column_width,
+            DEFAULT_TASK_COLUMN_WIDTH
+        );
+    }
+
+    #[test]
     fn persists_view_settings() {
         let mut storage = Storage::open_in_memory().expect("open database");
         let expected = ViewSettings {
             view_mode: ViewMode::Month,
             anchor_date: "2026-10-01".to_owned(),
             show_dependencies: false,
+            task_column_width: 420,
         };
 
         storage
@@ -778,6 +820,28 @@ mod tests {
         assert_eq!(
             storage.load_board().expect("load board").view_settings,
             expected
+        );
+    }
+
+    #[test]
+    fn clamps_task_column_width_when_loading() {
+        let mut storage = Storage::open_in_memory().expect("open database");
+        let settings = ViewSettings {
+            view_mode: ViewMode::Biweek,
+            anchor_date: "2026-09-18".to_owned(),
+            show_dependencies: true,
+            task_column_width: 900,
+        };
+        storage
+            .save_view_settings(&settings)
+            .expect("save clamped width");
+        assert_eq!(
+            storage
+                .load_board()
+                .expect("load board")
+                .view_settings
+                .task_column_width,
+            MAX_TASK_COLUMN_WIDTH
         );
     }
 

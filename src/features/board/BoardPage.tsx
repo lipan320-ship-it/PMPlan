@@ -7,6 +7,7 @@ import {
   type ChangeEvent,
   type DragEvent as ReactDragEvent,
   type FormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
@@ -20,13 +21,16 @@ import {
   validateDateRange,
 } from "../../domain/dateOnly";
 import { validateDependencyChange } from "../../domain/dependencies";
-import type {
-  BoardSnapshot,
-  DateOnly,
-  MotherTask,
-  SubTask,
-  ViewMode,
-  ViewSettings,
+import {
+  clampTaskColumnWidth,
+  MAX_TASK_COLUMN_WIDTH,
+  MIN_TASK_COLUMN_WIDTH,
+  type BoardSnapshot,
+  type DateOnly,
+  type MotherTask,
+  type SubTask,
+  type ViewMode,
+  type ViewSettings,
 } from "../../domain/models";
 import {
   evaluateDependencyConflicts,
@@ -87,6 +91,12 @@ interface ActiveMotherDrag {
   startY: number;
   moved: boolean;
   suppressClick: boolean;
+}
+
+interface ActiveTaskColumnResize {
+  pointerId: number;
+  startX: number;
+  startWidth: number;
 }
 
 interface ToastState {
@@ -258,6 +268,25 @@ export function BoardPage({ gateway }: BoardPageProps) {
   const [dragActive, setDragActive] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleTaskColumnWidthChange = (width: number) => {
+    const nextWidth = clampTaskColumnWidth(width);
+    setBoard((current) =>
+      current
+        ? { ...current, viewSettings: { ...current.viewSettings, taskColumnWidth: nextWidth } }
+        : current,
+    );
+  };
+
+  const commitTaskColumnWidth = (width: number) => {
+    if (!board) {
+      return;
+    }
+    void saveViewSettings({
+      ...board.viewSettings,
+      taskColumnWidth: clampTaskColumnWidth(width),
+    });
+  };
 
   const reloadBoard = async () => {
     setLoadError(null);
@@ -1043,6 +1072,9 @@ export function BoardPage({ gateway }: BoardPageProps) {
           viewMode={board.viewSettings.viewMode}
           conflicts={dependencyConflicts}
           showDependencies={board.viewSettings.showDependencies}
+          taskColumnWidth={clampTaskColumnWidth(board.viewSettings.taskColumnWidth)}
+          onTaskColumnWidthChange={handleTaskColumnWidthChange}
+          onTaskColumnWidthCommit={commitTaskColumnWidth}
         />
       )}
 
@@ -1238,6 +1270,9 @@ interface TimelineBoardProps {
     subTask: SubTask,
     update: DateRangeUpdate,
   ) => void;
+  taskColumnWidth: number;
+  onTaskColumnWidthChange: (width: number) => void;
+  onTaskColumnWidthCommit: (width: number) => void;
 }
 
 function TimelineBoard({
@@ -1257,14 +1292,13 @@ function TimelineBoard({
   onEditSubTask,
   onQuickAdd,
   onDirectUpdate,
+  taskColumnWidth,
+  onTaskColumnWidthChange,
+  onTaskColumnWidthCommit,
 }: TimelineBoardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [viewportWidth, setViewportWidth] = useState(0);
   const baseColumnWidth = getDayColumnWidth(viewMode);
-  const rootStyles = window.getComputedStyle(document.documentElement);
-  const taskColumnWidth = Number.parseFloat(
-    rootStyles.getPropertyValue("--task-column-width"),
-  ) || 348;
   const availableTimelineWidth = Math.max(0, viewportWidth - taskColumnWidth - 2);
   const columnWidth = Math.max(
     baseColumnWidth,
@@ -1276,6 +1310,7 @@ function TimelineBoard({
   const [focusedMotherId, setFocusedMotherId] = useState<string | null>(null);
   const [draggedMotherId, setDraggedMotherId] = useState<string | null>(null);
   const activeMotherDragRef = useRef<ActiveMotherDrag | null>(null);
+  const activeTaskColumnResizeRef = useRef<ActiveTaskColumnResize | null>(null);
   const motherDropTargetRef = useRef<MotherDropTarget | null>(null);
   const suppressedMotherClickRef = useRef<string | null>(null);
   const [motherDropTarget, setMotherDropTarget] =
@@ -1318,6 +1353,70 @@ function TimelineBoard({
     motherDropTargetRef.current = null;
     setDraggedMotherId(null);
     setMotherDropTarget(null);
+  };
+
+  const beginTaskColumnResize = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (busy || event.button !== 0) {
+      return;
+    }
+    activeTaskColumnResizeRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startWidth: taskColumnWidth,
+    };
+    if (typeof event.currentTarget.setPointerCapture === "function") {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+    event.preventDefault();
+  };
+
+  const updateTaskColumnResize = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const active = activeTaskColumnResizeRef.current;
+    if (!active || active.pointerId !== event.pointerId) {
+      return;
+    }
+    onTaskColumnWidthChange(active.startWidth + event.clientX - active.startX);
+    event.preventDefault();
+  };
+
+  const finishTaskColumnResize = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const active = activeTaskColumnResizeRef.current;
+    if (!active || active.pointerId !== event.pointerId) {
+      return;
+    }
+    const nextWidth = clampTaskColumnWidth(active.startWidth + event.clientX - active.startX);
+    onTaskColumnWidthChange(nextWidth);
+    onTaskColumnWidthCommit(nextWidth);
+    activeTaskColumnResizeRef.current = null;
+    if (
+      typeof event.currentTarget.hasPointerCapture === "function" &&
+      event.currentTarget.hasPointerCapture(event.pointerId) &&
+      typeof event.currentTarget.releasePointerCapture === "function"
+    ) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    event.preventDefault();
+  };
+
+  const handleTaskColumnResizeKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const step = event.shiftKey ? 40 : 10;
+    const nextWidth =
+      event.key === "Home"
+        ? MIN_TASK_COLUMN_WIDTH
+        : event.key === "End"
+          ? MAX_TASK_COLUMN_WIDTH
+          : event.key === "ArrowLeft"
+            ? taskColumnWidth - step
+            : event.key === "ArrowRight"
+              ? taskColumnWidth + step
+              : null;
+    if (nextWidth === null) {
+      return;
+    }
+    event.preventDefault();
+    const clampedWidth = clampTaskColumnWidth(nextWidth);
+    onTaskColumnWidthChange(clampedWidth);
+    onTaskColumnWidthCommit(clampedWidth);
   };
 
   const beginMotherDrag = (
@@ -1408,10 +1507,33 @@ function TimelineBoard({
       <div className="board-scroll" ref={scrollRef}>
         <div
           className="board-grid"
-          style={{ "--timeline-width": `${timelineWidth}px` } as CSSProperties}
+          style={
+            {
+              "--task-column-width": `${taskColumnWidth}px`,
+              "--timeline-width": `${timelineWidth}px`,
+            } as CSSProperties
+          }
         >
-          <div className="task-column">
-            <div className="task-column__header">母任务 / 子任务</div>
+          <div className="task-column" style={{ "--task-column-width": `${taskColumnWidth}px` } as CSSProperties}>
+            <div className="task-column__header">
+              <span>母任务 / 子任务</span>
+              <div
+                aria-label="调整任务名列宽"
+                aria-valuemax={MAX_TASK_COLUMN_WIDTH}
+                aria-valuemin={MIN_TASK_COLUMN_WIDTH}
+                aria-valuenow={taskColumnWidth}
+                className="task-column__resize-handle"
+                onKeyDown={handleTaskColumnResizeKeyDown}
+                onPointerCancel={() => {
+                  activeTaskColumnResizeRef.current = null;
+                }}
+                onPointerDown={beginTaskColumnResize}
+                onPointerMove={updateTaskColumnResize}
+                onPointerUp={finishTaskColumnResize}
+                role="separator"
+                tabIndex={0}
+              />
+            </div>
             {rows.map((row) => (
               <TaskTreeRow
                 busy={busy}
