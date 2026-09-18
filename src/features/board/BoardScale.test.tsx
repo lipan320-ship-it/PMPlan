@@ -24,7 +24,7 @@ function createLargeBoard(): BoardSnapshot {
     tasks,
     viewSettings: {
       viewMode: "biweek",
-      anchorDate: "2026-09-17",
+      anchorDate: "2026-09-14",
       showDependencies: true,
       taskColumnWidth: 348,
     },

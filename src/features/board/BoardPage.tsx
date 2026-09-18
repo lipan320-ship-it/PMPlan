@@ -10,6 +10,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
@@ -51,9 +52,12 @@ import {
   type DateRangeUpdate,
 } from "./directManipulation";
 import {
+  getAnchorForFocusDate,
   getDayColumnWidth,
+  getPanStepDays,
   getViewRange,
-  navigateAnchor,
+  getVisibleDayCount,
+  shiftAnchor,
   type ViewRange,
 } from "./viewRange";
 
@@ -112,6 +116,15 @@ interface ActiveTaskColumnResize {
   pointerId: number;
   startX: number;
   startWidth: number;
+}
+
+interface ActiveTimelinePan {
+  pointerId: number;
+  startX: number;
+  baseAnchor: DateOnly;
+  currentAnchor: DateOnly;
+  moved: boolean;
+  committedDays: number;
 }
 
 interface ToastState {
@@ -280,6 +293,26 @@ function formatShortDate(value: DateOnly): string {
   return `${Number(value.slice(5, 7))}/${Number(value.slice(8, 10))}`;
 }
 
+function formatMonthLabel(value: DateOnly): string {
+  return `${value.slice(0, 4)} 年 ${Number(value.slice(5, 7))} 月`;
+}
+
+function buildMonthGroups(
+  dates: DateOnly[],
+): { key: string; label: string; span: number }[] {
+  const groups: { key: string; label: string; span: number }[] = [];
+  for (const date of dates) {
+    const key = date.slice(0, 7);
+    const last = groups.at(-1);
+    if (last && last.key === key) {
+      last.span += 1;
+    } else {
+      groups.push({ key, label: formatMonthLabel(date), span: 1 });
+    }
+  }
+  return groups;
+}
+
 function messageFromError(error: unknown): string {
   if (
     typeof error === "object" &&
@@ -321,7 +354,10 @@ export function BoardPage({ gateway }: BoardPageProps) {
   const [confirmOverwrite, setConfirmOverwrite] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [viewportWidth, setViewportWidth] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const viewSettingsRef = useRef<ViewSettings | null>(null);
 
   const handleTaskColumnWidthChange = (width: number) => {
     const nextWidth = clampTaskColumnWidth(width);
@@ -371,6 +407,22 @@ export function BoardPage({ gateway }: BoardPageProps) {
   }, [gateway]);
 
   useEffect(() => {
+    viewSettingsRef.current = board?.viewSettings ?? null;
+  }, [board?.viewSettings]);
+
+  useEffect(() => {
+    const element = scrollContainerRef.current;
+    if (!element || typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const observer = new ResizeObserver(([entry]) => {
+      setViewportWidth(entry.contentRect.width);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     if (!toast) {
       return;
     }
@@ -382,13 +434,23 @@ export function BoardPage({ gateway }: BoardPageProps) {
     () => buildRows(board?.tasks ?? [], search),
     [board?.tasks, search],
   );
-  const range = useMemo(
-    () =>
-      board
-        ? getViewRange(board.viewSettings.viewMode, board.viewSettings.anchorDate)
-        : null,
-    [board],
+  const activeViewMode: ViewMode = board?.viewSettings.viewMode ?? "biweek";
+  const taskColumnWidth = board
+    ? clampTaskColumnWidth(board.viewSettings.taskColumnWidth)
+    : MIN_TASK_COLUMN_WIDTH;
+  const availableTimelineWidth = Math.max(
+    0,
+    viewportWidth - taskColumnWidth - 2,
   );
+  const dayCount = getVisibleDayCount(availableTimelineWidth, activeViewMode);
+  const baseColumnWidth = getDayColumnWidth(activeViewMode);
+  const columnWidth =
+    availableTimelineWidth > 0 ? availableTimelineWidth / dayCount : baseColumnWidth;
+  const range = useMemo(
+    () => (board ? getViewRange(board.viewSettings.anchorDate, dayCount) : null),
+    [board, dayCount],
+  );
+  const timelineWidth = (range?.dates.length ?? 0) * columnWidth;
   const dependencyConflicts = useMemo(
     () => evaluateDependencyConflicts(board?.tasks ?? []),
     [board?.tasks],
@@ -416,6 +478,53 @@ export function BoardPage({ gateway }: BoardPageProps) {
       await gateway.saveViewSettings(settings);
       setBoard((current) => (current ? { ...current, viewSettings: settings } : current));
     }, "视图设置已保存");
+  };
+
+  // 平移与翻页是高频操作：立即更新本地状态，但不置 busy、不弹成功提示。
+  const persistViewSettingsSilently = async (settings: ViewSettings) => {
+    try {
+      await gateway.saveViewSettings(settings);
+    } catch (error) {
+      console.warn("保存视图设置失败", error);
+      setToast({ tone: "error", message: messageFromError(error) });
+    }
+  };
+
+  const applyAnchor = (anchorDate: DateOnly, persist: boolean) => {
+    const current = viewSettingsRef.current;
+    if (!current) {
+      return;
+    }
+    const next = { ...current, anchorDate };
+    viewSettingsRef.current = next;
+    setBoard((currentBoard) =>
+      currentBoard ? { ...currentBoard, viewSettings: next } : currentBoard,
+    );
+    if (persist) {
+      void persistViewSettingsSilently(next);
+    }
+  };
+
+  const commitPan = () => {
+    const current = viewSettingsRef.current;
+    if (current) {
+      void persistViewSettingsSilently(current);
+    }
+  };
+
+  const pageAnchor = (direction: -1 | 1) => {
+    const current = viewSettingsRef.current;
+    if (!current) {
+      return;
+    }
+    applyAnchor(
+      shiftAnchor(current.anchorDate, direction * getPanStepDays(dayCount)),
+      true,
+    );
+  };
+
+  const focusToday = () => {
+    applyAnchor(getAnchorForFocusDate(todayDateOnly(), dayCount), true);
   };
 
   const handleCreateMother = async (name: string) => {
@@ -1001,28 +1110,14 @@ export function BoardPage({ gateway }: BoardPageProps) {
             aria-label="上一周期"
             className="icon-button"
             disabled={busy}
-            onClick={() =>
-              void saveViewSettings({
-                ...board.viewSettings,
-                anchorDate: navigateAnchor(
-                  board.viewSettings.viewMode,
-                  board.viewSettings.anchorDate,
-                  -1,
-                ),
-              })
-            }
+            onClick={() => pageAnchor(-1)}
           >
             ←
           </button>
           <button
             className="button button--quiet"
             disabled={busy}
-            onClick={() =>
-              void saveViewSettings({
-                ...board.viewSettings,
-                anchorDate: todayDateOnly(),
-              })
-            }
+            onClick={() => focusToday()}
           >
             今天
           </button>
@@ -1030,16 +1125,7 @@ export function BoardPage({ gateway }: BoardPageProps) {
             aria-label="下一周期"
             className="icon-button"
             disabled={busy}
-            onClick={() =>
-              void saveViewSettings({
-                ...board.viewSettings,
-                anchorDate: navigateAnchor(
-                  board.viewSettings.viewMode,
-                  board.viewSettings.anchorDate,
-                  1,
-                ),
-              })
-            }
+            onClick={() => pageAnchor(1)}
           >
             →
           </button>
@@ -1177,12 +1263,17 @@ export function BoardPage({ gateway }: BoardPageProps) {
           range={range}
           rows={rows}
           tasks={board.tasks}
-          viewMode={board.viewSettings.viewMode}
           conflicts={dependencyConflicts}
           showDependencies={board.viewSettings.showDependencies}
-          taskColumnWidth={clampTaskColumnWidth(board.viewSettings.taskColumnWidth)}
+          taskColumnWidth={taskColumnWidth}
           onTaskColumnWidthChange={handleTaskColumnWidthChange}
           onTaskColumnWidthCommit={commitTaskColumnWidth}
+          columnWidth={columnWidth}
+          timelineWidth={timelineWidth}
+          anchorDate={board.viewSettings.anchorDate}
+          scrollContainerRef={scrollContainerRef}
+          onAnchorChange={applyAnchor}
+          onCommitPan={commitPan}
         />
       )}
 
@@ -1357,7 +1448,6 @@ interface TimelineBoardProps {
   rows: BoardRow[];
   tasks: MotherTask[];
   range: ViewRange;
-  viewMode: ViewMode;
   busy: boolean;
   conflicts: DependencyConflict[];
   showDependencies: boolean;
@@ -1387,13 +1477,18 @@ interface TimelineBoardProps {
   taskColumnWidth: number;
   onTaskColumnWidthChange: (width: number) => void;
   onTaskColumnWidthCommit: (width: number) => void;
+  columnWidth: number;
+  timelineWidth: number;
+  anchorDate: DateOnly;
+  scrollContainerRef: RefObject<HTMLDivElement | null>;
+  onAnchorChange: (anchorDate: DateOnly, persist: boolean) => void;
+  onCommitPan: () => void;
 }
 
 function TimelineBoard({
   rows,
   tasks,
   range,
-  viewMode,
   busy,
   conflicts,
   showDependencies,
@@ -1410,16 +1505,13 @@ function TimelineBoard({
   taskColumnWidth,
   onTaskColumnWidthChange,
   onTaskColumnWidthCommit,
+  columnWidth,
+  timelineWidth,
+  anchorDate,
+  scrollContainerRef,
+  onAnchorChange,
+  onCommitPan,
 }: TimelineBoardProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [viewportWidth, setViewportWidth] = useState(0);
-  const baseColumnWidth = getDayColumnWidth(viewMode);
-  const availableTimelineWidth = Math.max(0, viewportWidth - taskColumnWidth - 2);
-  const columnWidth = Math.max(
-    baseColumnWidth,
-    availableTimelineWidth / range.dates.length,
-  );
-  const timelineWidth = range.dates.length * columnWidth;
   const today = todayDateOnly();
   const todayIndex = range.dates.indexOf(today);
   const [focusedMotherId, setFocusedMotherId] = useState<string | null>(null);
@@ -1435,6 +1527,12 @@ function TimelineBoard({
   const subTaskDropTargetRef = useRef<SubTaskDropTarget | null>(null);
   const [subTaskDropTarget, setSubTaskDropTarget] =
     useState<SubTaskDropTarget | null>(null);
+  const activePanRef = useRef<ActiveTimelinePan | null>(null);
+  const [isPanning, setIsPanning] = useState(false);
+  const panCommitTimerRef = useRef<number | null>(null);
+  const wheelAnchorRef = useRef<DateOnly>(anchorDate);
+  const wheelDeltaRef = useRef(0);
+  const timelineColumnRef = useRef<HTMLDivElement>(null);
   const conflictMotherIds = useMemo(
     () => new Set(conflicts.map((conflict) => conflict.taskId)),
     [conflicts],
@@ -1455,18 +1553,6 @@ function TimelineBoard({
     }
     return related;
   }, [focusedMotherId, tasks]);
-
-  useEffect(() => {
-    const element = scrollRef.current;
-    if (!element || typeof ResizeObserver === "undefined") {
-      return;
-    }
-    const observer = new ResizeObserver(([entry]) => {
-      setViewportWidth(entry.contentRect.width);
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
 
   const clearMotherDrag = () => {
     activeMotherDragRef.current = null;
@@ -1704,9 +1790,127 @@ function TimelineBoard({
     event.preventDefault();
   };
 
+  useEffect(() => {
+    wheelAnchorRef.current = anchorDate;
+    wheelDeltaRef.current = 0;
+  }, [anchorDate]);
+
+  const monthGroups = useMemo(() => buildMonthGroups(range.dates), [range.dates]);
+
+  useEffect(() => {
+    const element = timelineColumnRef.current;
+    if (!element) {
+      return;
+    }
+    const handleWheel = (event: WheelEvent) => {
+      const horizontal =
+        Math.abs(event.deltaX) > Math.abs(event.deltaY)
+          ? event.deltaX
+          : event.shiftKey
+            ? event.deltaY
+            : 0;
+      if (horizontal === 0) {
+        return;
+      }
+      event.preventDefault();
+      wheelDeltaRef.current += horizontal;
+      const days = Math.trunc(-wheelDeltaRef.current / columnWidth);
+      if (days === 0) {
+        return;
+      }
+      wheelDeltaRef.current += days * columnWidth;
+      const next = shiftAnchor(wheelAnchorRef.current, days);
+      wheelAnchorRef.current = next;
+      onAnchorChange(next, false);
+      if (panCommitTimerRef.current !== null) {
+        window.clearTimeout(panCommitTimerRef.current);
+      }
+      panCommitTimerRef.current = window.setTimeout(() => {
+        panCommitTimerRef.current = null;
+        onCommitPan();
+      }, 300);
+    };
+    element.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      element.removeEventListener("wheel", handleWheel);
+      if (panCommitTimerRef.current !== null) {
+        window.clearTimeout(panCommitTimerRef.current);
+        panCommitTimerRef.current = null;
+      }
+    };
+  }, [columnWidth, onAnchorChange, onCommitPan]);
+
+  const clearPan = () => {
+    activePanRef.current = null;
+    setIsPanning(false);
+  };
+
+  const beginPan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) {
+      return;
+    }
+    const target = event.target;
+    if (
+      target instanceof Element &&
+      target.closest(".timeline-bar, .resize-handle, [data-no-pan]")
+    ) {
+      return;
+    }
+    activePanRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      baseAnchor: anchorDate,
+      currentAnchor: anchorDate,
+      moved: false,
+      committedDays: 0,
+    };
+    if (typeof event.currentTarget.setPointerCapture === "function") {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+  };
+
+  const updatePan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const active = activePanRef.current;
+    if (!active || active.pointerId !== event.pointerId) {
+      return;
+    }
+    const deltaX = event.clientX - active.startX;
+    if (!active.moved && Math.abs(deltaX) < 4) {
+      return;
+    }
+    if (!active.moved) {
+      active.moved = true;
+      setIsPanning(true);
+    }
+    const offset = pixelsToDayOffset(-deltaX, columnWidth);
+    if (offset === active.committedDays) {
+      return;
+    }
+    active.committedDays = offset;
+    active.currentAnchor = shiftAnchor(active.baseAnchor, offset);
+    onAnchorChange(active.currentAnchor, false);
+  };
+
+  const finishPan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const active = activePanRef.current;
+    if (!active || active.pointerId !== event.pointerId) {
+      return;
+    }
+    if (
+      typeof event.currentTarget.hasPointerCapture === "function" &&
+      event.currentTarget.hasPointerCapture(event.pointerId)
+    ) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    if (active.moved) {
+      onAnchorChange(active.currentAnchor, true);
+    }
+    clearPan();
+  };
+
   return (
     <section className="board-frame" aria-label="工作规划时间板">
-      <div className="board-scroll" ref={scrollRef}>
+      <div className="board-scroll" ref={scrollContainerRef}>
         <div
           className="board-grid"
           style={
@@ -1773,7 +1977,31 @@ function TimelineBoard({
             ))}
           </div>
 
-          <div className="timeline-column" style={{ width: timelineWidth }}>
+          <div
+            className={`timeline-column ${isPanning ? "is-panning" : ""}`}
+            onLostPointerCapture={finishPan}
+            onPointerCancel={finishPan}
+            onPointerDown={beginPan}
+            onPointerMove={updatePan}
+            onPointerUp={finishPan}
+            ref={timelineColumnRef}
+            style={{ width: timelineWidth }}
+          >
+            <div
+              aria-hidden="true"
+              className="date-header__months"
+              style={{ gridTemplateColumns: `repeat(${range.dates.length}, ${columnWidth}px)` }}
+            >
+              {monthGroups.map((group) => (
+                <span
+                  className="date-month"
+                  key={group.key}
+                  style={{ gridColumn: `span ${group.span}` }}
+                >
+                  {group.label}
+                </span>
+              ))}
+            </div>
             <div
               className="date-header"
               style={{ gridTemplateColumns: `repeat(${range.dates.length}, ${columnWidth}px)` }}

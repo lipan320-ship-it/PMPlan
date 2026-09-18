@@ -434,6 +434,28 @@ input:focus-visible {
   min-width: var(--timeline-width);
 }
 
+.timeline-column.is-panning {
+  cursor: grabbing;
+  user-select: none;
+  touch-action: none;
+}
+
+.date-header__months {
+  display: grid;
+  border-bottom: 1px solid rgb(220 228 241 / 75%);
+  background: #f7f9fd;
+}
+
+.date-month {
+  overflow: hidden;
+  padding: 2px 6px;
+  border-right: 1px solid rgb(220 228 241 / 75%);
+  color: var(--text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .date-header {
   display: grid;
 }

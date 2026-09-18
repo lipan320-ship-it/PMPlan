@@ -294,7 +294,7 @@ describe("App", () => {
     });
 
     expect(screen.getByRole("heading", { name: "添加子任务" })).toBeInTheDocument();
-    expect(screen.getByLabelText("开始日期")).toHaveValue("2026-09-14");
+    expect(screen.getByLabelText("开始日期")).toHaveValue("2026-09-17");
   });
 
   it("sets multiple-task dependencies and shows conflict feedback", async () => {
