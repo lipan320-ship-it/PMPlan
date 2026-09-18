@@ -62,6 +62,7 @@ pub struct ViewSettings {
     pub view_mode: ViewMode,
     pub anchor_date: String,
     pub show_dependencies: bool,
+    pub task_column_width: i64,
 }
 
 #[derive(Debug, Clone, Deserialize)]

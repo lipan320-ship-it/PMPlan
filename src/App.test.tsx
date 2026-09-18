@@ -256,6 +256,25 @@ describe("App", () => {
     expect((await gateway.loadBoard()).tasks).toEqual([]);
   });
 
+  it("adjusts and persists the task column width from the separator", async () => {
+    const gateway = new MemoryStorageGateway(createEmptyBoard());
+    await gateway.createMotherTask({ name: "可调宽任务" });
+    render(<App gateway={gateway} />);
+
+    const separator = await screen.findByRole("separator", { name: "调整任务名列宽" });
+    fireEvent.keyDown(separator, { key: "ArrowRight" });
+
+    await waitFor(() => {
+      expect(separator).toHaveAttribute("aria-valuenow", "358");
+    });
+    expect((await gateway.loadBoard()).viewSettings.taskColumnWidth).toBe(358);
+
+    fireEvent.keyDown(separator, { key: "End" });
+    await waitFor(() => {
+      expect(separator).toHaveAttribute("aria-valuenow", "600");
+    });
+  });
+
   it("prefills the clicked date when double-clicking a mother timeline", async () => {
     const gateway = new MemoryStorageGateway({
       ...createEmptyBoard(),
@@ -263,6 +282,7 @@ describe("App", () => {
         viewMode: "biweek",
         anchorDate: "2026-09-17",
         showDependencies: true,
+        taskColumnWidth: 348,
       },
     });
     const mother = await gateway.createMotherTask({ name: "快速规划" });
@@ -285,6 +305,7 @@ describe("App", () => {
         viewMode: "biweek",
         anchorDate: "2026-09-17",
         showDependencies: true,
+        taskColumnWidth: 348,
       },
     });
     const predecessor = await gateway.createMotherTask({ name: "前置任务" });

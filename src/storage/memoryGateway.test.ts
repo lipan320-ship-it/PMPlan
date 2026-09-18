@@ -8,6 +8,7 @@ const emptyBoard: BoardSnapshot = {
     viewMode: "biweek",
     anchorDate: "2026-09-17",
     showDependencies: true,
+    taskColumnWidth: 348,
   },
 };
 
@@ -41,6 +42,16 @@ describe("MemoryStorageGateway", () => {
 
     await gateway.deleteMotherTask(mother.id);
     expect((await gateway.loadBoard()).tasks).toEqual([]);
+  });
+
+  it("persists and clamps the task column width", async () => {
+    const gateway = new MemoryStorageGateway(emptyBoard);
+
+    await gateway.saveViewSettings({ ...emptyBoard.viewSettings, taskColumnWidth: 999 });
+    expect((await gateway.loadBoard()).viewSettings.taskColumnWidth).toBe(600);
+
+    await gateway.saveViewSettings({ ...emptyBoard.viewSettings, taskColumnWidth: 280.4 });
+    expect((await gateway.loadBoard()).viewSettings.taskColumnWidth).toBe(280);
   });
 
   it("reorders every mother task and rejects incomplete order data", async () => {

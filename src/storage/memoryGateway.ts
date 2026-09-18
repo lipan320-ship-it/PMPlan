@@ -14,6 +14,7 @@ import {
   type SubTask,
   type UpdateSubTaskInput,
   type ViewSettings,
+  clampTaskColumnWidth,
 } from "../domain/models";
 import type { StorageGateway } from "./gateway";
 import { exportBoardJson, prepareJsonImport } from "../transfer/jsonTransfer";
@@ -152,7 +153,10 @@ export class MemoryStorageGateway implements StorageGateway {
   }
 
   async saveViewSettings(settings: ViewSettings): Promise<void> {
-    this.board.viewSettings = structuredClone(settings);
+    this.board.viewSettings = structuredClone({
+      ...settings,
+      taskColumnWidth: clampTaskColumnWidth(settings.taskColumnWidth),
+    });
   }
 
   async analyzeImport(
