@@ -636,6 +636,47 @@ input:focus-visible {
   cursor: grabbing;
 }
 
+.quarter-resize-handle {
+  z-index: 9;
+  position: absolute;
+  top: 9px;
+  height: 26px;
+  width: 12px;
+  border-radius: 6px;
+  cursor: ew-resize;
+  opacity: 0;
+  touch-action: none;
+  transition: opacity 120ms ease;
+}
+
+.quarter-resize-handle::after {
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--primary);
+  content: "";
+}
+
+.quarter-resize-handle--start {
+  left: -12px;
+}
+
+.quarter-resize-handle--start::after {
+  right: 0;
+}
+
+.quarter-resize-handle--end::after {
+  left: 0;
+}
+
+.quarter-timeline__bar-hit-target:hover .quarter-resize-handle,
+.quarter-timeline__bar-hit-target:focus-visible .quarter-resize-handle,
+.quarter-timeline__bar-hit-target.is-interacting .quarter-resize-handle {
+  opacity: 1;
+}
+
 .quarter-timeline__bar {
   z-index: 6;
   position: absolute;
@@ -655,6 +696,7 @@ input:focus-visible {
   top: 9px;
   min-width: 6px;
   height: 26px;
+  overflow: visible;
   padding: 0 5px;
   border-radius: 7px;
   color: #fff;

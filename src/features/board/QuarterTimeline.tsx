@@ -10,6 +10,8 @@ import type { BoardRow } from "./BoardPage";
 import {
   moveSubTask,
   pixelsToDayOffset,
+  resizeSubTaskEnd,
+  resizeSubTaskStart,
   type DateRangeUpdate,
 } from "./directManipulation";
 import {
@@ -17,6 +19,7 @@ import {
   buildQuarterWeekTicks,
   getQuarterBarGeometry,
   getQuarterDateAtOffset,
+  QUARTER_MIN_BAR_WIDTH,
 } from "./quarterOverview";
 import type { ViewRange } from "./viewRange";
 
@@ -211,8 +214,11 @@ interface QuarterInteractiveTaskBarProps {
   ) => void;
 }
 
+type QuarterInteractionMode = "move" | "resizeStart" | "resizeEnd";
+
 interface ActiveQuarterDrag {
   pointerId: number;
+  mode: QuarterInteractionMode;
   startX: number;
   dayOffset: number;
   moved: boolean;
@@ -231,19 +237,41 @@ function QuarterInteractiveTaskBar({
   const suppressClickRef = useRef(false);
   const [preview, setPreview] = useState<{
     update: DateRangeUpdate;
+    mode: QuarterInteractionMode;
     dayOffset: number;
   } | null>(null);
   const effectiveEnd = subTask.endDate ?? subTask.startDate;
-  const visualWidth = geometry.width;
+  const previewPixelOffset = (preview?.dayOffset ?? 0) * pixelsPerDay;
+  const visualLeft =
+    geometry.left +
+    (preview?.mode === "resizeStart" || preview?.mode === "move"
+      ? previewPixelOffset
+      : 0);
+  const visualWidth = Math.max(
+    QUARTER_MIN_BAR_WIDTH,
+    geometry.width +
+      (preview?.mode === "resizeStart"
+        ? -previewPixelOffset
+        : preview?.mode === "resizeEnd"
+          ? previewPixelOffset
+          : 0),
+  );
   const hitWidth = Math.max(visualWidth, 24);
-  const previewOffset = (preview?.dayOffset ?? 0) * pixelsPerDay;
 
   const beginDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (busy || event.button !== 0) {
       return;
     }
+    const edge = (event.target as HTMLElement).dataset.edge;
+    const mode: QuarterInteractionMode =
+      edge === "start"
+        ? "resizeStart"
+        : edge === "end"
+          ? "resizeEnd"
+          : "move";
     interactionRef.current = {
       pointerId: event.pointerId,
+      mode,
       startX: event.clientX,
       dayOffset: 0,
       moved: false,
@@ -263,11 +291,25 @@ function QuarterInteractiveTaskBar({
       event.clientX - active.startX,
       pixelsPerDay,
     );
-    active.dayOffset = dayOffset;
+    const update =
+      active.mode === "move"
+        ? moveSubTask(subTask, dayOffset)
+        : active.mode === "resizeStart"
+          ? resizeSubTaskStart(subTask, dayOffset)
+          : resizeSubTaskEnd(subTask, dayOffset);
+    const updatedEnd = update.endDate ?? update.startDate;
+    const effectiveDayOffset =
+      active.mode === "move"
+        ? diffDays(subTask.startDate, update.startDate)
+        : active.mode === "resizeStart"
+          ? diffDays(subTask.startDate, update.startDate)
+          : diffDays(effectiveEnd, updatedEnd);
+    active.dayOffset = effectiveDayOffset;
     active.moved = active.moved || Math.abs(event.clientX - active.startX) >= 4;
     setPreview({
-      update: moveSubTask(subTask, dayOffset),
-      dayOffset,
+      update,
+      mode: active.mode,
+      dayOffset: effectiveDayOffset,
     });
   };
 
@@ -288,7 +330,10 @@ function QuarterInteractiveTaskBar({
     }
 
     suppressClickRef.current = active.moved;
-    if (active.moved && update && active.dayOffset !== 0) {
+    const dateChanged =
+      update &&
+      (update.startDate !== subTask.startDate || update.endDate !== subTask.endDate);
+    if (active.moved && update && dateChanged) {
       onDirectUpdate(mother, subTask, update);
     }
   };
@@ -322,25 +367,40 @@ function QuarterInteractiveTaskBar({
       onPointerMove={updateDrag}
       onPointerUp={finishDrag}
       style={{
-        left: geometry.left + previewOffset,
+        left: visualLeft,
         top: 0,
         width: hitWidth,
         height: "100%",
       }}
-      title={`${subTask.name}：${subTask.startDate} 至 ${effectiveEnd}；拖动调整日期，点击编辑日期`}
+      title={`${subTask.name}：${subTask.startDate} 至 ${effectiveEnd}；拖动主体或边缘调整日期，点击编辑日期`}
       type="button"
     >
+      <span
+        aria-hidden="true"
+        className="quarter-resize-handle quarter-resize-handle--start"
+        data-edge="start"
+      />
       <span
         className="quarter-timeline__bar quarter-timeline__bar--subtask"
         style={{ left: 0, width: visualWidth }}
       >
         <span className="quarter-timeline__bar-label">{subTask.name}</span>
         {preview ? (
-          <span className="drag-preview" role="status">
+          <span
+            className="drag-preview"
+            data-testid="quarter-drag-preview"
+            role="status"
+          >
             {preview.update.startDate} → {preview.update.endDate ?? preview.update.startDate}
           </span>
         ) : null}
       </span>
+      <span
+        aria-hidden="true"
+        className="quarter-resize-handle quarter-resize-handle--end"
+        data-edge="end"
+        style={{ left: visualWidth }}
+      />
     </button>
   );
 }

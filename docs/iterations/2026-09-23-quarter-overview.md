@@ -14,14 +14,14 @@
 - 新增临时的“季度总览”开关，不扩展 TypeScript/Rust/SQLite 的持久化 `ViewMode`。
 - 总览窗口保留当前 `anchorDate`，按三个月周年日计算并将长度约束在 90-92 天。
 - 表头改为按真实天数比例的月份带和周一刻度；行背景只绘制周/月边界，不生成 90 个日格。
-- 任务条按真实日期连续映射，单日任务保留最小可见标记；季度模式支持拖动整条子任务按天平移并保持持续天数，点击子任务仍打开现有精确日期编辑弹窗，左右边缘拉伸继续在详细视图完成。
+- 任务条按真实日期连续映射，单日任务保留最小可见标记；季度模式支持拖动整条子任务按天平移并保持持续天数，也支持拖动左右边缘分别调整开始和结束日期，点击子任务仍打开现有精确日期编辑弹窗。
 - 现有周、双周、月视图、按天拖拽/拉伸、依赖开关和 JSON 数据格式保持不变。
 
 ## 完成结果
 
 - `src/features/board/quarterOverview.ts` 提供滚动范围、月份带、周刻度、日期映射和裁切几何计算。
 - `src/features/board/QuarterTimeline.tsx` 提供语义化季度表头、可拖动子任务条和单日任务的扩展命中区。
-- 季度子任务拖动复用现有日期平移与保存回滚边界；4px 内的手势仍视为点击，左右边缘不在季度模式中承担拉伸操作。
+- 季度子任务拖动复用现有日期平移、边缘拉伸与保存回滚边界；4px 内的手势仍视为点击，窄任务条使用扩展边缘命中区。
 - `BoardPage` 的翻页、今天定位和平移在季度模式下使用实际 90-92 天窗口；切回详情模式时仍保存合法的既有视图模式。
 - 季度总览的状态不进入 SQLite `view_settings.view_mode`，旧数据库无需迁移。
 
@@ -29,12 +29,14 @@
 
 - 日期：2026-09-26
 - 季度总览中的子任务条支持整条拖动，按完整日期吸附并保持持续天数；4px 内的手势仍打开日期编辑弹窗。
-- 单日任务保留 6px 的视觉标记，同时使用至少 24px 的拖动命中区；左右边缘拉伸继续使用周 / 双周 / 月详细视图。
+- 短任务保留最小 6px 的视觉标记，同时使用至少 24px 的主体命中宽度；左右边缘各向外扩展 12px，避免占满窄任务的主体平移区域。
+- 修复预览气泡被季度任务条裁切的问题，拖动中实时显示日期范围，结束后移除。
+- 提交前同步最后修改的提示文案测试断言，并重新通过 62 项测试、全量 ESLint 和生产构建（含 TypeScript 检查）。
 
 ## 验证
 
-- `npx.cmd vitest run src/features/board/quarterOverview.test.ts src/features/board/quarterOverview.test.tsx`：13 tests passed。
-- `npx.cmd vitest run`：11 test files / 59 tests passed。
+- `npx.cmd vitest run src/features/board/quarterOverview.test.ts src/features/board/quarterOverview.test.tsx`：16 tests passed。
+- `npx.cmd vitest run`：11 test files / 62 tests passed。
 - `npm.cmd run typecheck`：passed。
 - `npx.cmd eslint src`：passed。
 - `npm.cmd run build`：passed。

@@ -10,6 +10,14 @@ const ANCHOR_DATE = "2026-11-09";
 const MOTHER_ID = "mother-quarter-overview";
 const SUBTASK_ID = "sub-quarter-overview";
 
+function getQuarterEdge(bar: HTMLElement, edge: "start" | "end"): HTMLElement {
+  const handle = bar.querySelector(`[data-edge="${edge}"]`);
+  if (!(handle instanceof HTMLElement)) {
+    throw new Error(`quarter ${edge} resize handle missing`);
+  }
+  return handle;
+}
+
 function createQuarterBoard(): BoardSnapshot {
   return {
     tasks: [
@@ -82,7 +90,7 @@ describe("quarter overview integration", () => {
     const bar = screen.getByTestId(`quarter-subtask-${SUBTASK_ID}`);
     expect(bar).toHaveAttribute(
       "title",
-      "跨月交付：2026-11-30 至 2026-12-02；拖动调整日期，点击编辑日期",
+      "跨月交付：2026-11-30 至 2026-12-02；拖动主体或边缘调整日期，点击编辑日期",
     );
 
     await user.click(bar);
@@ -153,12 +161,24 @@ describe("quarter overview integration", () => {
     const bar = screen.getByTestId(`quarter-subtask-${SUBTASK_ID}`);
     fireEvent.pointerDown(bar, { button: 0, clientX: 400, pointerId: 7 });
     fireEvent.pointerMove(bar, { clientX: 424, pointerId: 7 });
-    fireEvent.pointerUp(bar, { clientX: 424, pointerId: 7 });
+
+    expect(screen.getByTestId("quarter-drag-preview")).toHaveTextContent(
+      "2026-12-02 → 2026-12-04",
+    );
+
+    fireEvent.pointerMove(bar, { clientX: 436, pointerId: 7 });
+    expect(screen.getByTestId("quarter-drag-preview")).toHaveTextContent(
+      "2026-12-03 → 2026-12-05",
+    );
+
+    fireEvent.pointerUp(bar, { clientX: 436, pointerId: 7 });
+
+    expect(screen.queryByTestId("quarter-drag-preview")).toBeNull();
 
     await waitFor(async () => {
       expect((await gateway.loadBoard()).tasks[0]?.subTasks[0]).toMatchObject({
-        startDate: "2026-12-02",
-        endDate: "2026-12-04",
+        startDate: "2026-12-03",
+        endDate: "2026-12-05",
       });
     });
   });
@@ -188,6 +208,145 @@ describe("quarter overview integration", () => {
     expect((await gateway.loadBoard()).tasks[0]?.subTasks[0]).toMatchObject({
       startDate: "2026-11-30",
       endDate: null,
+    });
+  });
+
+  it("resizes the quarter task start and end edges with live date previews", async () => {
+    const gateway = new MemoryStorageGateway(createQuarterBoard());
+    render(<App gateway={gateway} />);
+
+    await screen.findByText("季度规划");
+    await userEvent.setup().click(screen.getByRole("button", { name: "季度总览" }));
+
+    let bar = screen.getByTestId(`quarter-subtask-${SUBTASK_ID}`);
+    const startEdge = getQuarterEdge(bar, "start");
+    fireEvent.pointerDown(startEdge, { button: 0, clientX: 400, pointerId: 9 });
+    fireEvent.pointerMove(bar, { clientX: 388, pointerId: 9 });
+    expect(screen.getByTestId("quarter-drag-preview")).toHaveTextContent(
+      "2026-11-29 → 2026-12-02",
+    );
+    fireEvent.pointerUp(bar, { clientX: 388, pointerId: 9 });
+
+    await waitFor(async () => {
+      expect((await gateway.loadBoard()).tasks[0]?.subTasks[0]).toMatchObject({
+        startDate: "2026-11-29",
+        endDate: "2026-12-02",
+      });
+    });
+
+    bar = screen.getByTestId(`quarter-subtask-${SUBTASK_ID}`);
+    const endEdge = getQuarterEdge(bar, "end");
+    fireEvent.pointerDown(endEdge, { button: 0, clientX: 400, pointerId: 10 });
+    fireEvent.pointerMove(bar, { clientX: 412, pointerId: 10 });
+    expect(screen.getByTestId("quarter-drag-preview")).toHaveTextContent(
+      "2026-11-29 → 2026-12-03",
+    );
+    fireEvent.pointerUp(bar, { clientX: 412, pointerId: 10 });
+
+    await waitFor(async () => {
+      expect((await gateway.loadBoard()).tasks[0]?.subTasks[0]).toMatchObject({
+        startDate: "2026-11-29",
+        endDate: "2026-12-03",
+      });
+    });
+  });
+
+  it("extends a single-day quarter task from either edge", async () => {
+    const leftSnapshot = createQuarterBoard();
+    const leftSubTask = leftSnapshot.tasks[0]?.subTasks[0];
+    if (!leftSubTask) {
+      throw new Error("quarter subtask missing");
+    }
+    leftSubTask.endDate = null;
+    const leftGateway = new MemoryStorageGateway(leftSnapshot);
+    const { unmount } = render(<App gateway={leftGateway} />);
+
+    await screen.findByText("季度规划");
+    await userEvent.setup().click(screen.getByRole("button", { name: "季度总览" }));
+
+    let bar = screen.getByTestId(`quarter-subtask-${SUBTASK_ID}`);
+    const startEdge = getQuarterEdge(bar, "start");
+    fireEvent.pointerDown(startEdge, { button: 0, clientX: 400, pointerId: 11 });
+    fireEvent.pointerMove(bar, { clientX: 388, pointerId: 11 });
+    expect(screen.getByTestId("quarter-drag-preview")).toHaveTextContent(
+      "2026-11-29 → 2026-11-30",
+    );
+    fireEvent.pointerUp(bar, { clientX: 388, pointerId: 11 });
+
+    await waitFor(async () => {
+      expect((await leftGateway.loadBoard()).tasks[0]?.subTasks[0]).toMatchObject({
+        startDate: "2026-11-29",
+        endDate: "2026-11-30",
+      });
+    });
+    unmount();
+
+    const rightSnapshot = createQuarterBoard();
+    const rightSubTask = rightSnapshot.tasks[0]?.subTasks[0];
+    if (!rightSubTask) {
+      throw new Error("quarter subtask missing");
+    }
+    rightSubTask.endDate = null;
+    const rightGateway = new MemoryStorageGateway(rightSnapshot);
+    render(<App gateway={rightGateway} />);
+
+    await screen.findByText("季度规划");
+    await userEvent.setup().click(screen.getByRole("button", { name: "季度总览" }));
+
+    bar = screen.getByTestId(`quarter-subtask-${SUBTASK_ID}`);
+    const endEdge = getQuarterEdge(bar, "end");
+    fireEvent.pointerDown(endEdge, { button: 0, clientX: 400, pointerId: 12 });
+    fireEvent.pointerMove(bar, { clientX: 412, pointerId: 12 });
+    expect(screen.getByTestId("quarter-drag-preview")).toHaveTextContent(
+      "2026-11-30 → 2026-12-01",
+    );
+    fireEvent.pointerUp(bar, { clientX: 412, pointerId: 12 });
+
+    await waitFor(async () => {
+      expect((await rightGateway.loadBoard()).tasks[0]?.subTasks[0]).toMatchObject({
+        startDate: "2026-11-30",
+        endDate: "2026-12-01",
+      });
+    });
+  });
+
+  it("does not let quarter edge resizing cross the opposite date", async () => {
+    const gateway = new MemoryStorageGateway(createQuarterBoard());
+    render(<App gateway={gateway} />);
+
+    await screen.findByText("季度规划");
+    await userEvent.setup().click(screen.getByRole("button", { name: "季度总览" }));
+
+    let bar = screen.getByTestId(`quarter-subtask-${SUBTASK_ID}`);
+    const startEdge = getQuarterEdge(bar, "start");
+    fireEvent.pointerDown(startEdge, { button: 0, clientX: 400, pointerId: 13 });
+    fireEvent.pointerMove(bar, { clientX: 520, pointerId: 13 });
+    expect(screen.getByTestId("quarter-drag-preview")).toHaveTextContent(
+      "2026-12-02 → 2026-12-02",
+    );
+    fireEvent.pointerUp(bar, { clientX: 520, pointerId: 13 });
+
+    await waitFor(async () => {
+      expect((await gateway.loadBoard()).tasks[0]?.subTasks[0]).toMatchObject({
+        startDate: "2026-12-02",
+        endDate: "2026-12-02",
+      });
+    });
+
+    bar = screen.getByTestId(`quarter-subtask-${SUBTASK_ID}`);
+    const endEdge = getQuarterEdge(bar, "end");
+    fireEvent.pointerDown(endEdge, { button: 0, clientX: 400, pointerId: 14 });
+    fireEvent.pointerMove(bar, { clientX: 280, pointerId: 14 });
+    expect(screen.getByTestId("quarter-drag-preview")).toHaveTextContent(
+      "2026-12-02 → 2026-12-02",
+    );
+    fireEvent.pointerUp(bar, { clientX: 280, pointerId: 14 });
+
+    await waitFor(async () => {
+      expect((await gateway.loadBoard()).tasks[0]?.subTasks[0]).toMatchObject({
+        startDate: "2026-12-02",
+        endDate: null,
+      });
     });
   });
 });

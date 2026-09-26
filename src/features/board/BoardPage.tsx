@@ -1279,7 +1279,7 @@ export function BoardPage({ gateway }: BoardPageProps) {
             }
             disabled={busy}
             onClick={() => setQuarterOverview((current) => !current)}
-            title="连续 90–92 天总览；拖动子任务平移日期，点击任务条进入精确编辑"
+            title="连续 90–92 天总览；拖动主体或边缘调整日期，点击任务条进入精确编辑"
             type="button"
           >
             季度总览
