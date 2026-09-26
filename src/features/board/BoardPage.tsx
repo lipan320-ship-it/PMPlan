@@ -26,8 +26,11 @@ import {
   clampTaskColumnWidth,
   MAX_TASK_COLUMN_WIDTH,
   MIN_TASK_COLUMN_WIDTH,
+  MOTHER_TAG_MAX_LENGTH,
+  normalizeMotherTag,
   type BoardSnapshot,
   type DateOnly,
+  type MotherSortMode,
   type MotherTask,
   type SubTask,
   type ViewMode,
@@ -60,13 +63,25 @@ import {
   shiftAnchor,
   type ViewRange,
 } from "./viewRange";
+import {
+  QUARTER_MAX_DAYS,
+  getQuarterOverviewRange,
+} from "./quarterOverview";
+import {
+  QuarterTimelineHeader,
+  QuarterTimelineRows,
+} from "./QuarterTimeline";
 
 interface BoardPageProps {
   gateway: StorageGateway;
 }
 
-type BoardRow =
-  | { kind: "mother"; mother: MotherTask }
+export type BoardRow =
+  | {
+      kind: "mother";
+      mother: MotherTask;
+      tagGroup?: { tag: string | null; count: number };
+    }
   | { kind: "subTask"; mother: MotherTask; subTask: SubTask }
   | { kind: "empty"; mother: MotherTask };
 
@@ -144,6 +159,7 @@ const IMPORT_TEMPLATE = `{
     {
       "id": "task-001",
       "name": "需求分析",
+      "tag": "产品",
       "expanded": true,
       "dependsOn": [],
       "subTasks": [
@@ -164,6 +180,7 @@ const IMPORT_TEMPLATE = `{
     {
       "id": "task-002",
       "name": "方案实施",
+      "tag": "交付",
       "expanded": true,
       "dependsOn": ["task-001"],
       "subTasks": [
@@ -185,23 +202,96 @@ const viewLabels: Record<ViewMode, string> = {
   month: "月",
 };
 
-function buildRows(tasks: MotherTask[], search: string): BoardRow[] {
+const motherTagCollator = new Intl.Collator("zh-CN", {
+  numeric: true,
+  sensitivity: "base",
+});
+
+function getMotherTag(mother: MotherTask): string | null {
+  return normalizeMotherTag(mother.tag);
+}
+
+function getMotherTagTone(tag: string | null): "coral" | "green" | "none" | undefined {
+  if (!tag) {
+    return "none";
+  }
+  if (tag === "内容") {
+    return "coral";
+  }
+  if (tag === "研究") {
+    return "green";
+  }
+  return undefined;
+}
+
+function sortMotherTasks(tasks: MotherTask[], mode: MotherSortMode): MotherTask[] {
+  if (mode === "manual") {
+    return tasks;
+  }
+  return [...tasks].sort((left, right) => {
+    const leftTag = getMotherTag(left);
+    const rightTag = getMotherTag(right);
+    if (!leftTag && rightTag) {
+      return 1;
+    }
+    if (leftTag && !rightTag) {
+      return -1;
+    }
+    if (leftTag && rightTag) {
+      const tagOrder = motherTagCollator.compare(leftTag, rightTag);
+      if (tagOrder !== 0) {
+        return tagOrder;
+      }
+    }
+    return left.sortOrder - right.sortOrder;
+  });
+}
+
+function buildRows(
+  tasks: MotherTask[],
+  search: string,
+  sortMode: MotherSortMode = "manual",
+): BoardRow[] {
   const query = search.trim().toLocaleLowerCase();
   const rows: BoardRow[] = [];
+  const visibleMothers = tasks.filter((mother) => {
+    const motherMatches =
+      mother.name.toLocaleLowerCase().includes(query) ||
+      (getMotherTag(mother)?.toLocaleLowerCase().includes(query) ?? false);
+    const matchingSubTasks = query
+      ? mother.subTasks.filter((subTask) =>
+          subTask.name.toLocaleLowerCase().includes(query),
+        )
+      : mother.subTasks;
+    return !query || motherMatches || matchingSubTasks.length > 0;
+  });
+  const orderedTasks = sortMotherTasks(visibleMothers, sortMode);
+  const groupCounts = new Map<string, number>();
+  if (sortMode === "tag") {
+    for (const mother of orderedTasks) {
+      const key = getMotherTag(mother) ?? "";
+      groupCounts.set(key, (groupCounts.get(key) ?? 0) + 1);
+    }
+  }
+  let previousTag: string | null | undefined;
 
-  for (const mother of tasks) {
-    const motherMatches = mother.name.toLocaleLowerCase().includes(query);
+  for (const mother of orderedTasks) {
+    const motherTag = getMotherTag(mother);
+    const motherMatches =
+      mother.name.toLocaleLowerCase().includes(query) ||
+      (motherTag?.toLocaleLowerCase().includes(query) ?? false);
     const matchingSubTasks = query
       ? mother.subTasks.filter((subTask) =>
           subTask.name.toLocaleLowerCase().includes(query),
         )
       : mother.subTasks;
 
-    if (query && !motherMatches && matchingSubTasks.length === 0) {
-      continue;
-    }
-
-    rows.push({ kind: "mother", mother });
+    const tagGroup =
+      sortMode === "tag" && motherTag !== previousTag
+        ? { tag: motherTag, count: groupCounts.get(motherTag ?? "") ?? 0 }
+        : undefined;
+    rows.push({ kind: "mother", mother, tagGroup });
+    previousTag = motherTag;
     const shouldShowChildren = query.length > 0 || mother.expanded;
     if (!shouldShowChildren) {
       continue;
@@ -355,6 +445,7 @@ export function BoardPage({ gateway }: BoardPageProps) {
   const [dragActive, setDragActive] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [viewportWidth, setViewportWidth] = useState(0);
+  const [quarterOverview, setQuarterOverview] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
@@ -438,11 +529,13 @@ export function BoardPage({ gateway }: BoardPageProps) {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
+  const motherSortMode: MotherSortMode = board?.viewSettings.motherSortMode ?? "manual";
   const rows = useMemo(
-    () => buildRows(board?.tasks ?? [], search),
-    [board?.tasks, search],
+    () => buildRows(board?.tasks ?? [], search, motherSortMode),
+    [board?.tasks, search, motherSortMode],
   );
   const activeViewMode: ViewMode = board?.viewSettings.viewMode ?? "biweek";
+  const anchorDate = board?.viewSettings.anchorDate;
   const taskColumnWidth = board
     ? clampTaskColumnWidth(board.viewSettings.taskColumnWidth)
     : MIN_TASK_COLUMN_WIDTH;
@@ -452,12 +545,25 @@ export function BoardPage({ gateway }: BoardPageProps) {
   );
   const dayCount = getVisibleDayCount(availableTimelineWidth, activeViewMode);
   const baseColumnWidth = getDayColumnWidth(activeViewMode);
-  const columnWidth =
+  const detailColumnWidth =
     availableTimelineWidth > 0 ? availableTimelineWidth / dayCount : baseColumnWidth;
-  const range = useMemo(
-    () => (board ? getViewRange(board.viewSettings.anchorDate, dayCount) : null),
-    [board, dayCount],
+  const quarterRange = useMemo(
+    () => (anchorDate ? getQuarterOverviewRange(anchorDate) : null),
+    [anchorDate],
   );
+  const detailRange = useMemo(
+    () => (anchorDate ? getViewRange(anchorDate, dayCount) : null),
+    [anchorDate, dayCount],
+  );
+  const activeDayCount = quarterOverview
+    ? quarterRange?.dates.length ?? QUARTER_MAX_DAYS
+    : dayCount;
+  const range = quarterOverview ? quarterRange : detailRange;
+  const columnWidth = quarterOverview
+    ? availableTimelineWidth > 0
+      ? availableTimelineWidth / activeDayCount
+      : 12
+    : detailColumnWidth;
   const timelineWidth = (range?.dates.length ?? 0) * columnWidth;
   const dependencyConflicts = useMemo(
     () => evaluateDependencyConflicts(board?.tasks ?? []),
@@ -526,18 +632,18 @@ export function BoardPage({ gateway }: BoardPageProps) {
       return;
     }
     applyAnchor(
-      shiftAnchor(current.anchorDate, direction * getPanStepDays(dayCount)),
+      shiftAnchor(current.anchorDate, direction * getPanStepDays(activeDayCount)),
       true,
     );
   };
 
   const focusToday = () => {
-    applyAnchor(getAnchorForFocusDate(todayDateOnly(), dayCount), true);
+    applyAnchor(getAnchorForFocusDate(todayDateOnly(), activeDayCount), true);
   };
 
-  const handleCreateMother = async (name: string) => {
+  const handleCreateMother = async (name: string, tag: string) => {
     const succeeded = await runAction(async () => {
-      const mother = await gateway.createMotherTask({ name });
+      const mother = await gateway.createMotherTask({ name, tag: normalizeMotherTag(tag) });
       setBoard((current) =>
         current ? { ...current, tasks: [...current.tasks, mother] } : current,
       );
@@ -547,20 +653,23 @@ export function BoardPage({ gateway }: BoardPageProps) {
     }
   };
 
-  const handleRenameMother = async (mother: MotherTask, name: string) => {
+  const handleRenameMother = async (mother: MotherTask, name: string, tag: string) => {
     const succeeded = await runAction(async () => {
-      await gateway.renameMotherTask({ id: mother.id, name });
+      const normalizedTag = normalizeMotherTag(tag);
+      await gateway.renameMotherTask({ id: mother.id, name, tag: normalizedTag });
       setBoard((current) =>
         current
           ? {
               ...current,
               tasks: current.tasks.map((task) =>
-                task.id === mother.id ? { ...task, name: name.trim() } : task,
+                task.id === mother.id
+                  ? { ...task, name: name.trim(), tag: normalizedTag }
+                  : task,
               ),
             }
           : current,
       );
-    }, "母任务名称已更新");
+    }, "母任务已更新");
     if (succeeded) {
       setMotherDialog(null);
     }
@@ -1144,25 +1253,65 @@ export function BoardPage({ gateway }: BoardPageProps) {
           <div className="segmented-control" aria-label="视图模式">
             {(Object.keys(viewLabels) as ViewMode[]).map((viewMode) => (
               <button
-                aria-pressed={board.viewSettings.viewMode === viewMode}
+                aria-pressed={!quarterOverview && board.viewSettings.viewMode === viewMode}
                 className={
-                  board.viewSettings.viewMode === viewMode
+                  !quarterOverview && board.viewSettings.viewMode === viewMode
                     ? "segmented-control__item is-active"
                     : "segmented-control__item"
                 }
                 disabled={busy}
                 key={viewMode}
-                onClick={() =>
-                  void saveViewSettings({
-                    ...board.viewSettings,
-                    viewMode,
-                  })
-                }
+                onClick={() => {
+                  setQuarterOverview(false);
+                  void saveViewSettings({ ...board.viewSettings, viewMode });
+                }}
               >
                 {viewLabels[viewMode]}
               </button>
             ))}
           </div>
+          <button
+            aria-pressed={quarterOverview}
+            className={
+              quarterOverview
+                ? "segmented-control__item is-active quarter-overview-toggle"
+                : "segmented-control__item quarter-overview-toggle"
+            }
+            disabled={busy}
+            onClick={() => setQuarterOverview((current) => !current)}
+            title="连续 90–92 天总览；拖动子任务平移日期，点击任务条进入精确编辑"
+            type="button"
+          >
+            季度总览
+          </button>
+          <div className="segmented-control mother-sort-control" aria-label="母任务排序">
+            {(["manual", "tag"] as MotherSortMode[]).map((sortMode) => (
+              <button
+                aria-pressed={motherSortMode === sortMode}
+                className={
+                  motherSortMode === sortMode
+                    ? "segmented-control__item is-active"
+                    : "segmented-control__item"
+                }
+                disabled={busy}
+                key={sortMode}
+                onClick={() =>
+                  void saveViewSettings({
+                    ...board.viewSettings,
+                    motherSortMode: sortMode,
+                  })
+                }
+                type="button"
+              >
+                {sortMode === "manual" ? "手动顺序" : "按标签分组"}
+              </button>
+            ))}
+          </div>
+          {motherSortMode === "tag" ? (
+            <span className="tag-sort-readonly">
+              <i aria-hidden="true" /> 标签视图只读
+            </span>
+          ) : null}
           <label className="search-field">
             <span aria-hidden="true">⌕</span>
             <span className="sr-only">搜索母任务或子任务</span>
@@ -1268,6 +1417,8 @@ export function BoardPage({ gateway }: BoardPageProps) {
             setSubTaskDialog({ mode: "create", mother, initialDate })
           }
           onToggleMother={(mother) => void handleToggleMother(mother)}
+          motherSortMode={motherSortMode}
+          quarterOverview={quarterOverview}
           range={range}
           rows={rows}
           tasks={board.tasks}
@@ -1289,6 +1440,7 @@ export function BoardPage({ gateway }: BoardPageProps) {
         <MotherTaskDialog
           busy={busy}
           initialName={motherDialog.mode === "rename" ? motherDialog.mother.name : ""}
+          initialTag={motherDialog.mode === "rename" ? motherDialog.mother.tag ?? "" : ""}
           mode={motherDialog.mode}
           onCancel={() => setMotherDialog(null)}
           onDelete={
@@ -1299,10 +1451,10 @@ export function BoardPage({ gateway }: BoardPageProps) {
                 }
               : undefined
           }
-          onSubmit={(name) =>
+          onSubmit={(name, tag) =>
             motherDialog.mode === "create"
-              ? handleCreateMother(name)
-              : handleRenameMother(motherDialog.mother, name)
+              ? handleCreateMother(name, tag)
+              : handleRenameMother(motherDialog.mother, name, tag)
           }
         />
       ) : null}
@@ -1455,6 +1607,8 @@ function PlannerHeader() {
 interface TimelineBoardProps {
   rows: BoardRow[];
   tasks: MotherTask[];
+  motherSortMode: MotherSortMode;
+  quarterOverview: boolean;
   range: ViewRange;
   busy: boolean;
   conflicts: DependencyConflict[];
@@ -1496,6 +1650,8 @@ interface TimelineBoardProps {
 function TimelineBoard({
   rows,
   tasks,
+  motherSortMode,
+  quarterOverview,
   range,
   busy,
   conflicts,
@@ -1638,7 +1794,7 @@ function TimelineBoard({
     event: ReactPointerEvent<HTMLElement>,
     suppressClick: boolean,
   ) => {
-    if (busy || event.button !== 0) {
+    if (busy || motherSortMode === "tag" || event.button !== 0) {
       return;
     }
     activeMotherDragRef.current = {
@@ -1980,6 +2136,7 @@ function TimelineBoard({
                 focusedMotherId={focusedMotherId}
                 relatedMotherIds={relatedMotherIds}
                 onFocusMother={setFocusedMotherId}
+                motherSortMode={motherSortMode}
                 row={row}
               />
             ))}
@@ -1995,61 +2152,91 @@ function TimelineBoard({
             ref={timelineColumnRef}
             style={{ width: timelineWidth }}
           >
-            <div
-              aria-hidden="true"
-              className="date-header__months"
-              style={{ gridTemplateColumns: `repeat(${range.dates.length}, ${columnWidth}px)` }}
-            >
-              {monthGroups.map((group) => (
-                <span
-                  className="date-month"
-                  key={group.key}
-                  style={{ gridColumn: `span ${group.span}` }}
-                >
-                  {group.label}
-                </span>
-              ))}
-            </div>
-            <div
-              className="date-header"
-              style={{ gridTemplateColumns: `repeat(${range.dates.length}, ${columnWidth}px)` }}
-            >
-              {range.dates.map((date) => {
-                const weekday = dayOfWeek(date);
-                return (
-                  <div
-                    className={`date-cell ${weekday === 0 || weekday === 6 ? "is-weekend" : ""} ${date === today ? "is-today" : ""}`}
-                    key={date}
-                  >
-                    <strong>{formatShortDate(date)}</strong>
-                    <span>{weekdayLabels[weekday]}</span>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="timeline-rows">
-              {todayIndex >= 0 ? (
+            {quarterOverview ? (
+              <QuarterTimelineHeader
+                range={range}
+                pixelsPerDay={columnWidth}
+                timelineWidth={timelineWidth}
+                today={today}
+              />
+            ) : (
+              <>
                 <div
                   aria-hidden="true"
-                  className="today-line"
-                  style={{ left: todayIndex * columnWidth + columnWidth / 2 }}
-                />
-              ) : null}
-              {rows.map((row) => (
-                <TimelineRow
-                  columnWidth={columnWidth}
+                  className="date-header__months"
+                  style={{ gridTemplateColumns: `repeat(${range.dates.length}, ${columnWidth}px)` }}
+                >
+                  {monthGroups.map((group) => (
+                    <span
+                      className="date-month"
+                      key={group.key}
+                      style={{ gridColumn: `span ${group.span}` }}
+                    >
+                      {group.label}
+                    </span>
+                  ))}
+                </div>
+                <div
+                  className="date-header"
+                  style={{ gridTemplateColumns: `repeat(${range.dates.length}, ${columnWidth}px)` }}
+                >
+                  {range.dates.map((date) => {
+                    const weekday = dayOfWeek(date);
+                    return (
+                      <div
+                        className={`date-cell ${weekday === 0 || weekday === 6 ? "is-weekend" : ""} ${date === today ? "is-today" : ""}`}
+                        key={date}
+                      >
+                        <strong>{formatShortDate(date)}</strong>
+                        <span>{weekdayLabels[weekday]}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+            <div className="timeline-rows">
+              {quarterOverview ? (
+                <QuarterTimelineRows
                   busy={busy}
-                  key={row.kind === "subTask" ? row.subTask.id : `${row.kind}-${row.mother.id}`}
                   onDirectUpdate={onDirectUpdate}
+                  focusedMotherId={focusedMotherId}
                   onEditSubTask={onEditSubTask}
                   onFocusMother={setFocusedMotherId}
                   onQuickAdd={onQuickAdd}
-                  focusedMotherId={focusedMotherId}
-                  relatedMotherIds={relatedMotherIds}
+                  pixelsPerDay={columnWidth}
                   range={range}
-                  row={row}
+                  relatedMotherIds={relatedMotherIds}
+                  rows={rows}
+                  timelineWidth={timelineWidth}
+                  today={today}
                 />
-              ))}
+              ) : (
+                <>
+                  {todayIndex >= 0 ? (
+                    <div
+                      aria-hidden="true"
+                      className="today-line"
+                      style={{ left: todayIndex * columnWidth + columnWidth / 2 }}
+                    />
+                  ) : null}
+                  {rows.map((row) => (
+                    <TimelineRow
+                      columnWidth={columnWidth}
+                      busy={busy}
+                      key={row.kind === "subTask" ? row.subTask.id : `${row.kind}-${row.mother.id}`}
+                      onDirectUpdate={onDirectUpdate}
+                      onEditSubTask={onEditSubTask}
+                      onFocusMother={setFocusedMotherId}
+                      onQuickAdd={onQuickAdd}
+                      focusedMotherId={focusedMotherId}
+                      relatedMotherIds={relatedMotherIds}
+                      range={range}
+                      row={row}
+                    />
+                  ))}
+                </>
+              )}
               {showDependencies ? (
                 <DependencyLayer
                   columnWidth={columnWidth}
@@ -2071,6 +2258,7 @@ function TimelineBoard({
 interface TaskTreeRowProps {
   row: BoardRow;
   busy: boolean;
+  motherSortMode: MotherSortMode;
   onToggleMother: (mother: MotherTask) => void;
   onEditMother: (mother: MotherTask) => void;
   onRequestDeleteMother: (mother: MotherTask) => void;
@@ -2140,6 +2328,7 @@ function MotherActionIcon({ name }: { name: MotherActionIconName }) {
 function TaskTreeRow({
   row,
   busy,
+  motherSortMode,
   onToggleMother,
   onEditMother,
   onRequestDeleteMother,
@@ -2169,6 +2358,8 @@ function TaskTreeRow({
       : ""
     : "";
   if (row.kind === "mother") {
+    const motherTag = getMotherTag(row.mother);
+    const canReorderMother = motherSortMode === "manual";
     const dropPosition = dropTarget?.id === row.mother.id
       ? dropTarget.position
       : null;
@@ -2177,21 +2368,30 @@ function TaskTreeRow({
       dropPosition ? `is-drop-${dropPosition}` : "",
     ].filter(Boolean).join(" ");
     return (
-      <div
-        className={`task-row task-row--mother ${conflict ? "has-conflict" : ""} ${focusClass} ${dragClass}`}
-        data-mother-row-id={row.mother.id}
-        onMouseEnter={() => onFocusMother(row.mother.id)}
-        onMouseLeave={() => onFocusMother(null)}
-      >
+      <>
+        {row.tagGroup ? (
+          <div className="tag-group-row" aria-label={`${row.tagGroup.tag ?? "无标签"}标签组`}>
+            <span className="tag-group-row__title">
+              {row.tagGroup.tag ?? "无标签"}
+            </span>
+            <span className="tag-group-row__count">{row.tagGroup.count} 项母任务</span>
+          </div>
+        ) : null}
+        <div
+          className={`task-row task-row--mother ${motherSortMode === "tag" ? "mother-row--tag-sorted" : ""} ${conflict ? "has-conflict" : ""} ${focusClass} ${dragClass}`}
+          data-mother-row-id={row.mother.id}
+          onMouseEnter={() => onFocusMother(row.mother.id)}
+          onMouseLeave={() => onFocusMother(null)}
+        >
         <span
           aria-hidden="true"
-          className="mother-drag-handle"
+          className={`mother-drag-handle ${canReorderMother ? "" : "mother-drag-handle--disabled"}`}
           data-testid={`mother-drag-handle-${row.mother.id}`}
-          onPointerCancel={onMotherPointerCancel}
-          onPointerDown={(event) => onMotherPointerDown(row.mother, event, false)}
-          onPointerMove={onMotherPointerMove}
-          onPointerUp={onMotherPointerUp}
-          title="按住拖动调整母任务顺序"
+          onPointerCancel={canReorderMother ? onMotherPointerCancel : undefined}
+          onPointerDown={canReorderMother ? (event) => onMotherPointerDown(row.mother, event, false) : undefined}
+          onPointerMove={canReorderMother ? onMotherPointerMove : undefined}
+          onPointerUp={canReorderMother ? onMotherPointerUp : undefined}
+          title={canReorderMother ? "按住拖动调整母任务顺序" : "按标签分组时不可调整母任务顺序"}
         >
           <svg viewBox="0 0 12 18">
             <circle cx="3" cy="4" r="1.2" />
@@ -2216,14 +2416,21 @@ function TaskTreeRow({
           className="task-name task-name--mother"
           disabled={busy}
           onClick={() => onToggleMother(row.mother)}
-          onPointerCancel={onMotherPointerCancel}
-          onPointerDown={(event) => onMotherPointerDown(row.mother, event, true)}
-          onPointerMove={onMotherPointerMove}
-          onPointerUp={onMotherPointerUp}
-          title={`${row.mother.expanded ? "点击收起子任务" : "点击展开子任务"}；按住拖动可调整顺序`}
+          onPointerCancel={canReorderMother ? onMotherPointerCancel : undefined}
+          onPointerDown={canReorderMother ? (event) => onMotherPointerDown(row.mother, event, true) : undefined}
+          onPointerMove={canReorderMother ? onMotherPointerMove : undefined}
+          onPointerUp={canReorderMother ? onMotherPointerUp : undefined}
+          title={`${row.mother.expanded ? "点击收起子任务" : "点击展开子任务"}${canReorderMother ? "；按住拖动可调整顺序" : ""}`}
         >
           {row.mother.name}
         </button>
+        <span
+          className="mother-tag"
+          data-tone={getMotherTagTone(motherTag)}
+          title={motherTag ? `标签：${motherTag}` : "未设置标签"}
+        >
+          {motherTag ?? "未设置"}
+        </span>
         <span className="task-count">{row.mother.subTasks.length}</span>
         {row.mother.dependsOn.length > 0 ? (
           <span
@@ -2276,7 +2483,8 @@ function TaskTreeRow({
             <MotherActionIcon name="delete" />
           </button>
         </div>
-      </div>
+        </div>
+      </>
     );
   }
 
@@ -2420,33 +2628,38 @@ function TimelineRow({
       ? getBarGeometry(span.startDate, span.endDate, range, columnWidth)
       : null;
     return (
-      <div
-        className={`${rowClass} timeline-row--quick-add`}
-        data-testid={`mother-timeline-${row.mother.id}`}
-        onMouseEnter={() => onFocusMother(row.mother.id)}
-        onMouseLeave={() => onFocusMother(null)}
-        onDoubleClick={(event) => {
-          if (busy) {
-            return;
-          }
-          const rectangle = event.currentTarget.getBoundingClientRect();
-          const rawIndex = Math.floor(
-            (event.clientX - rectangle.left) / columnWidth,
-          );
-          const dayIndex = Math.max(0, Math.min(range.dates.length - 1, rawIndex));
-          onQuickAdd(row.mother, range.dates[dayIndex]);
-        }}
-        title="双击日期快速添加子任务"
-      >
-        {background}
-        {geometry ? (
-          <div
-            className="timeline-bar timeline-bar--mother"
-            style={{ left: geometry.left, width: geometry.width }}
-            title={`${row.mother.name}：${span?.startDate} 至 ${span?.endDate}`}
-          />
+      <>
+        {row.tagGroup ? (
+          <div className="tag-group-row tag-group-row--timeline" aria-hidden="true" />
         ) : null}
-      </div>
+        <div
+          className={`${rowClass} timeline-row--quick-add`}
+          data-testid={`mother-timeline-${row.mother.id}`}
+          onMouseEnter={() => onFocusMother(row.mother.id)}
+          onMouseLeave={() => onFocusMother(null)}
+          onDoubleClick={(event) => {
+            if (busy) {
+              return;
+            }
+            const rectangle = event.currentTarget.getBoundingClientRect();
+            const rawIndex = Math.floor(
+              (event.clientX - rectangle.left) / columnWidth,
+            );
+            const dayIndex = Math.max(0, Math.min(range.dates.length - 1, rawIndex));
+            onQuickAdd(row.mother, range.dates[dayIndex]);
+          }}
+          title="双击日期快速添加子任务"
+        >
+          {background}
+          {geometry ? (
+            <div
+              className="timeline-bar timeline-bar--mother"
+              style={{ left: geometry.left, width: geometry.width }}
+              title={`${row.mother.name}：${span?.startDate} 至 ${span?.endDate}`}
+            />
+          ) : null}
+        </div>
+      </>
     );
   }
 
@@ -2499,6 +2712,9 @@ function DependencyLayer({
   let totalHeight = 0;
   for (const row of rows) {
     const rowHeight = row.kind === "mother" ? 48 : 44;
+    if (row.kind === "mother" && row.tagGroup) {
+      totalHeight += 31;
+    }
     if (row.kind === "mother") {
       rowCenters.set(row.mother.id, totalHeight + rowHeight / 2);
     }
@@ -2912,21 +3128,24 @@ function ImportTemplateDialog({
 interface MotherTaskDialogProps {
   mode: "create" | "rename";
   initialName: string;
+  initialTag: string;
   busy: boolean;
   onCancel: () => void;
-  onSubmit: (name: string) => Promise<void>;
+  onSubmit: (name: string, tag: string) => Promise<void>;
   onDelete?: () => void;
 }
 
 function MotherTaskDialog({
   mode,
   initialName,
+  initialTag,
   busy,
   onCancel,
   onSubmit,
   onDelete,
 }: MotherTaskDialogProps) {
   const [name, setName] = useState(initialName);
+  const [tag, setTag] = useState(initialTag);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (event: FormEvent) => {
@@ -2936,7 +3155,7 @@ function MotherTaskDialog({
       return;
     }
     setError(null);
-    void onSubmit(name);
+    void onSubmit(name, tag);
   };
 
   return (
@@ -2952,6 +3171,17 @@ function MotherTaskDialog({
             value={name}
           />
         </label>
+        <label className="field-label mother-tag-field">
+          <span>标签（可选）</span>
+          <input
+            disabled={busy}
+            maxLength={MOTHER_TAG_MAX_LENGTH}
+            onChange={(event) => setTag(event.target.value)}
+            placeholder="例如：产品、内容、研究"
+            value={tag}
+          />
+        </label>
+        <p className="field-hint">按标签分组时，同一标签的母任务会排在一起；留空归入“无标签”。</p>
         {error ? <p className="field-error">{error}</p> : null}
         <footer className="modal-actions">
           {onDelete ? (

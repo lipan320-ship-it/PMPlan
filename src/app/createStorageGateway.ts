@@ -16,6 +16,7 @@ export function createEmptyBoard(): BoardSnapshot {
       anchorDate: todayDateOnly(),
       showDependencies: true,
       taskColumnWidth: DEFAULT_TASK_COLUMN_WIDTH,
+      motherSortMode: "manual",
     },
   };
 }

@@ -6,6 +6,7 @@ use std::{
 
 use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use uuid::Uuid;
 
@@ -16,6 +17,7 @@ use crate::{
 
 const EXPORT_VERSION: &str = "1.0";
 const MAX_IMPORT_BYTES: usize = 10 * 1024 * 1024;
+const MOTHER_TAG_MAX_LENGTH: usize = 40;
 
 #[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -64,6 +66,8 @@ struct RawMotherTask {
     expanded: Option<bool>,
     depends_on: Option<Vec<String>>,
     sub_tasks: Option<Vec<RawSubTask>>,
+    #[serde(flatten)]
+    extra: HashMap<String, Value>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -85,6 +89,8 @@ struct PreparedImport {
 struct PreparedMotherTask {
     id: String,
     name: String,
+    tag: Option<String>,
+    tag_present: bool,
     expanded: bool,
     depends_on: Vec<String>,
     sub_tasks: Vec<PreparedSubTask>,
@@ -122,6 +128,7 @@ struct ExportDocument<'a> {
 struct ExportMotherTask<'a> {
     id: &'a str,
     name: &'a str,
+    tag: Option<&'a str>,
     expanded: bool,
     depends_on: &'a [String],
     sub_tasks: Vec<ExportSubTask<'a>>,
@@ -288,6 +295,11 @@ impl Storage {
                 &format!("{task_path}.name"),
                 &mut errors,
             );
+            let (tag, tag_present) = normalized_optional_tag(
+                raw_task.extra.get("tag"),
+                &format!("{task_path}.tag"),
+                &mut errors,
+            );
             let supplied_id = normalized_optional_id(
                 raw_task.id.as_deref(),
                 &format!("{task_path}.id"),
@@ -397,6 +409,8 @@ impl Storage {
             prepared_tasks.push(PreparedMotherTask {
                 id: resolved_id,
                 name,
+                tag,
+                tag_present,
                 expanded: raw_task.expanded.unwrap_or(false),
                 depends_on,
                 sub_tasks: prepared_sub_tasks,
@@ -496,13 +510,21 @@ impl Storage {
                 order
             };
             transaction.execute(
-                "INSERT INTO mother_tasks(id, name, expanded, sort_order)
-                 VALUES (?1, ?2, ?3, ?4)
+                "INSERT INTO mother_tasks(id, name, tag, expanded, sort_order)
+                 VALUES (?1, ?2, ?3, ?4, ?5)
                  ON CONFLICT(id) DO UPDATE SET
                    name = excluded.name,
                    expanded = excluded.expanded,
+                   tag = CASE WHEN ?6 THEN excluded.tag ELSE mother_tasks.tag END,
                    updated_at = CURRENT_TIMESTAMP",
-                params![task.id, task.name, task.expanded, sort_order],
+                params![
+                    task.id,
+                    task.name,
+                    task.tag,
+                    task.expanded,
+                    sort_order,
+                    task.tag_present
+                ],
             )?;
 
             let mut next_sub_order: i64 = transaction.query_row(
@@ -583,6 +605,7 @@ fn export_mother_task(task: &MotherTask) -> ExportMotherTask<'_> {
     ExportMotherTask {
         id: &task.id,
         name: &task.name,
+        tag: task.tag.as_deref(),
         expanded: task.expanded,
         depends_on: &task.depends_on,
         sub_tasks: task.sub_tasks.iter().map(export_sub_task).collect(),
@@ -649,6 +672,35 @@ fn normalized_optional_id(
         }
         trimmed.to_owned()
     })
+}
+
+fn normalized_optional_tag(
+    value: Option<&Value>,
+    path: &str,
+    errors: &mut Vec<ValidationIssue>,
+) -> (Option<String>, bool) {
+    let Some(value) = value else {
+        return (None, false);
+    };
+    let tag = match value {
+        Value::Null => return (None, true),
+        Value::String(value) => value.trim().to_owned(),
+        _ => {
+            errors.push(issue(path, "tag 必须是字符串或 null"));
+            return (None, true);
+        }
+    };
+    let tag = (!tag.is_empty()).then_some(tag);
+    if tag
+        .as_deref()
+        .is_some_and(|value| value.chars().count() > MOTHER_TAG_MAX_LENGTH)
+    {
+        errors.push(issue(
+            path,
+            &format!("标签不能超过 {MOTHER_TAG_MAX_LENGTH} 个字符"),
+        ));
+    }
+    (tag, true)
 }
 
 fn validate_date(value: &str, path: &str, errors: &mut Vec<ValidationIssue>) {
@@ -740,7 +792,7 @@ mod tests {
     fn previews_and_overwrites_valid_json() {
         let mut storage = Storage::open_in_memory().expect("open database");
         storage
-            .create_mother_task("Existing")
+            .create_mother_task("Existing", None)
             .expect("create existing task");
 
         let preview = storage
@@ -764,7 +816,7 @@ mod tests {
     fn reports_multiple_validation_errors_without_writing() {
         let mut storage = Storage::open_in_memory().expect("open database");
         let existing = storage
-            .create_mother_task("Keep me")
+            .create_mother_task("Keep me", None)
             .expect("create existing task");
         let invalid = r#"{
           "version": "2.0",
@@ -799,7 +851,7 @@ mod tests {
     fn merge_updates_matches_and_keeps_unmentioned_tasks() {
         let mut storage = Storage::open_in_memory().expect("open database");
         let existing = storage
-            .create_mother_task("Existing")
+            .create_mother_task("Existing", None)
             .expect("create existing task");
         let child = storage
             .create_sub_task(&CreateSubTaskInput {
@@ -810,7 +862,7 @@ mod tests {
             })
             .expect("create child");
         storage
-            .create_mother_task("Untouched")
+            .create_mother_task("Untouched", None)
             .expect("create untouched task");
         let merge = format!(
             r#"{{
@@ -843,7 +895,7 @@ mod tests {
     fn merge_matches_missing_ids_and_generates_ids_for_new_items() {
         let mut storage = Storage::open_in_memory().expect("open database");
         let existing = storage
-            .create_mother_task("Existing")
+            .create_mother_task("Existing", None)
             .expect("create existing task");
         let child = storage
             .create_sub_task(&CreateSubTaskInput {
@@ -902,6 +954,41 @@ mod tests {
             storage.load_board().expect("load source").tasks,
             restored.load_board().expect("load restored").tasks
         );
+    }
+
+    #[test]
+    fn exports_tags_and_preserves_or_clears_them_during_merge() {
+        let mut storage = Storage::open_in_memory().expect("open database");
+        let mother = storage
+            .create_mother_task("Tagged", Some("Product"))
+            .expect("create tagged task");
+        let exported = storage.export_json_content().expect("export tagged task");
+        assert!(exported.contains("\"tag\": \"Product\""));
+
+        let omitted = format!(
+            r#"{{"version":"1.0","tasks":[{{"id":"{}","name":"Tagged","dependsOn":[],"subTasks":[]}}]}}"#,
+            mother.id
+        );
+        storage
+            .apply_import_content(&omitted, ImportMode::Merge)
+            .expect("merge omitted tag");
+        assert_eq!(
+            storage.load_board().expect("load omitted tag").tasks[0]
+                .tag
+                .as_deref(),
+            Some("Product")
+        );
+
+        let cleared = format!(
+            r#"{{"version":"1.0","tasks":[{{"id":"{}","name":"Tagged","tag":null,"dependsOn":[],"subTasks":[]}}]}}"#,
+            mother.id
+        );
+        storage
+            .apply_import_content(&cleared, ImportMode::Merge)
+            .expect("merge explicit null tag");
+        assert!(storage.load_board().expect("load cleared tag").tasks[0]
+            .tag
+            .is_none());
     }
 
     #[test]

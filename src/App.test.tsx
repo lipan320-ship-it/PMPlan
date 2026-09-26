@@ -77,6 +77,44 @@ describe("App", () => {
     expect(screen.queryByText("数据分析")).not.toBeInTheDocument();
   });
 
+  it("edits mother tags and groups the board without changing manual order", async () => {
+    const user = userEvent.setup();
+    const gateway = new MemoryStorageGateway(createEmptyBoard());
+    const first = await gateway.createMotherTask({ name: "第一组计划", tag: "B" });
+    const second = await gateway.createMotherTask({ name: "第二组计划", tag: "A" });
+    const untagged = await gateway.createMotherTask({ name: "未分类计划" });
+    const { container } = render(<App gateway={gateway} />);
+
+    await screen.findByText(first.name);
+    await user.click(screen.getByRole("button", { name: `修改母任务“${first.name}”` }));
+    const tagInput = screen.getByLabelText("标签（可选）");
+    await user.clear(tagInput);
+    await user.type(tagInput, "C");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await user.click(screen.getByRole("button", { name: "按标签分组" }));
+    const groupTitles = Array.from(
+      container.querySelectorAll(".task-column .tag-group-row__title"),
+    ).map((element) => element.textContent);
+    expect(groupTitles).toEqual(["A", "C", "无标签"]);
+
+    const motherNames = screen
+      .getAllByRole("button", { name: /收起母任务/ })
+      .filter((button) => button.getAttribute("aria-label")?.includes("“"))
+      .map((button) => button.getAttribute("aria-label"));
+    expect(motherNames).toEqual([
+      `收起母任务“${second.name}”`,
+      `收起母任务“${first.name}”`,
+      `收起母任务“${untagged.name}”`,
+    ]);
+    expect(screen.getByTestId(`mother-drag-handle-${first.id}`)).toHaveClass(
+      "mother-drag-handle--disabled",
+    );
+    expect((await gateway.loadBoard()).tasks[0].sortOrder).toBe(0);
+    expect((await gateway.loadBoard()).tasks[0].tag).toBe("C");
+    expect((await gateway.loadBoard()).viewSettings.motherSortMode).toBe("tag");
+  });
+
   it("toggles children from the mother name and exposes four icon actions", async () => {
     const user = userEvent.setup();
     const gateway = new MemoryStorageGateway(createEmptyBoard());

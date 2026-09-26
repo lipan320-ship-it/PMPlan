@@ -1,5 +1,13 @@
 export type DateOnly = string;
 export type ViewMode = "week" | "biweek" | "month";
+export type MotherSortMode = "manual" | "tag";
+
+export const MOTHER_TAG_MAX_LENGTH = 40;
+
+export function normalizeMotherTag(value: string | null | undefined): string | null {
+  const tag = value?.trim() ?? "";
+  return tag || null;
+}
 
 export const DEFAULT_TASK_COLUMN_WIDTH = 348;
 export const MIN_TASK_COLUMN_WIDTH = 240;
@@ -24,6 +32,7 @@ export interface SubTask {
 export interface MotherTask {
   id: string;
   name: string;
+  tag?: string | null;
   expanded: boolean;
   sortOrder: number;
   dependsOn: string[];
@@ -35,6 +44,7 @@ export interface ViewSettings {
   anchorDate: DateOnly;
   showDependencies: boolean;
   taskColumnWidth: number;
+  motherSortMode?: MotherSortMode;
 }
 
 export interface BoardSnapshot {
@@ -44,11 +54,13 @@ export interface BoardSnapshot {
 
 export interface CreateMotherTaskInput {
   name: string;
+  tag?: string | null;
 }
 
 export interface RenameMotherTaskInput {
   id: string;
   name: string;
+  tag?: string | null;
 }
 
 export interface SetMotherExpandedInput {

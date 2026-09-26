@@ -12,6 +12,8 @@ pub struct BoardSnapshot {
 pub struct MotherTask {
     pub id: String,
     pub name: String,
+    #[serde(default)]
+    pub tag: Option<String>,
     pub expanded: bool,
     pub sort_order: i64,
     pub depends_on: Vec<String>,
@@ -35,6 +37,31 @@ pub enum ViewMode {
     Week,
     Biweek,
     Month,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum MotherSortMode {
+    #[default]
+    Manual,
+    Tag,
+}
+
+impl MotherSortMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Manual => "manual",
+            Self::Tag => "tag",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "manual" => Some(Self::Manual),
+            "tag" => Some(Self::Tag),
+            _ => None,
+        }
+    }
 }
 
 impl ViewMode {
@@ -63,12 +90,16 @@ pub struct ViewSettings {
     pub anchor_date: String,
     pub show_dependencies: bool,
     pub task_column_width: i64,
+    #[serde(default)]
+    pub mother_sort_mode: MotherSortMode,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateMotherTaskInput {
     pub name: String,
+    #[serde(default)]
+    pub tag: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -76,6 +107,8 @@ pub struct CreateMotherTaskInput {
 pub struct RenameMotherTaskInput {
     pub id: String,
     pub name: String,
+    #[serde(default)]
+    pub tag: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

@@ -44,6 +44,43 @@ describe("MemoryStorageGateway", () => {
     expect((await gateway.loadBoard()).tasks).toEqual([]);
   });
 
+  it("normalizes and persists one optional mother-task tag", async () => {
+    const gateway = new MemoryStorageGateway(emptyBoard);
+    const mother = await gateway.createMotherTask({
+      name: "Tagged plan",
+      tag: "  Product  ",
+    });
+
+    expect(mother.tag).toBe("Product");
+    await gateway.renameMotherTask({ id: mother.id, name: "Tagged plan", tag: " " });
+    expect((await gateway.loadBoard()).tasks[0].tag).toBeNull();
+  });
+
+  it("keeps an existing tag when a merge import omits the tag and clears it on null", async () => {
+    const gateway = new MemoryStorageGateway(emptyBoard);
+    const mother = await gateway.createMotherTask({ name: "Existing", tag: "Product" });
+
+    const omittedTag = JSON.stringify({
+      version: "1.0",
+      tasks: [{ id: mother.id, name: "Existing", dependsOn: [], subTasks: [] }],
+    });
+    await gateway.applyImport(
+      { kind: "content", value: omittedTag, fileName: "omitted-tag.json" },
+      "merge",
+    );
+    expect((await gateway.loadBoard()).tasks[0].tag).toBe("Product");
+
+    const clearedTag = JSON.stringify({
+      version: "1.0",
+      tasks: [{ id: mother.id, name: "Existing", tag: null, dependsOn: [], subTasks: [] }],
+    });
+    await gateway.applyImport(
+      { kind: "content", value: clearedTag, fileName: "cleared-tag.json" },
+      "merge",
+    );
+    expect((await gateway.loadBoard()).tasks[0].tag).toBeNull();
+  });
+
   it("persists and clamps the task column width", async () => {
     const gateway = new MemoryStorageGateway(emptyBoard);
 

@@ -5,6 +5,10 @@ import type {
   MotherTask,
   SubTask,
 } from "../domain/models";
+import {
+  MOTHER_TAG_MAX_LENGTH,
+  normalizeMotherTag,
+} from "../domain/models";
 import type {
   ImportMode,
   ImportPreview,
@@ -55,6 +59,28 @@ function optionalId(
     return null;
   }
   return value.trim();
+}
+
+function optionalTag(
+  object: JsonObject,
+  path: string,
+  errors: ValidationIssue[],
+): { present: boolean; value: string | null } {
+  if (!Object.prototype.hasOwnProperty.call(object, "tag")) {
+    return { present: false, value: null };
+  }
+  const rawValue = object.tag;
+  if (rawValue !== null && typeof rawValue !== "string") {
+    errors.push(issue(`${path}.tag`, "tag 必须是字符串或 null"));
+    return { present: true, value: null };
+  }
+  const value = normalizeMotherTag(rawValue as string | null);
+  if (value && value.length > MOTHER_TAG_MAX_LENGTH) {
+    errors.push(
+      issue(`${path}.tag`, `标签不能超过 ${MOTHER_TAG_MAX_LENGTH} 个字符`),
+    );
+  }
+  return { present: true, value };
 }
 
 function cloneBoard(board: BoardSnapshot): BoardSnapshot {
@@ -112,6 +138,7 @@ export function prepareJsonImport(
   const motherIds = new Set<string>();
   const subTaskIds = new Set<string>();
   const importedTasks: MotherTask[] = [];
+  const importedTagPresence = new Map<string, boolean>();
   let subTaskCount = 0;
   let dependencyCount = 0;
 
@@ -122,6 +149,7 @@ export function prepareJsonImport(
       return;
     }
     const name = stringValue(rawTask, "name", taskPath, errors);
+    const tag = optionalTag(rawTask, taskPath, errors);
     const suppliedId = optionalId(rawTask, taskPath, errors);
     if (!suppliedId && mode === "overwrite") {
       errors.push(issue(`${taskPath}.id`, "覆盖导入要求母任务包含 id"));
@@ -215,11 +243,13 @@ export function prepareJsonImport(
     importedTasks.push({
       id,
       name,
+      tag: tag.value,
       expanded: typeof rawTask.expanded === "boolean" ? rawTask.expanded : false,
       sortOrder: taskIndex,
       dependsOn,
       subTasks,
     });
+    importedTagPresence.set(id, tag.present);
   });
 
   let finalTasks: MotherTask[];
@@ -253,6 +283,9 @@ export function prepareJsonImport(
       }
       finalTasks[existingIndex] = {
         ...imported,
+        tag: importedTagPresence.get(imported.id)
+          ? imported.tag ?? null
+          : existing.tag ?? null,
         sortOrder: existing.sortOrder,
         subTasks: mergedSubTasks,
       };
@@ -315,6 +348,7 @@ export function exportBoardJson(board: BoardSnapshot): {
     tasks: board.tasks.map((task) => ({
       id: task.id,
       name: task.name,
+      tag: task.tag ?? null,
       expanded: task.expanded,
       dependsOn: task.dependsOn,
       subTasks: task.subTasks.map((subTask) => ({

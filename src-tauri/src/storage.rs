@@ -10,8 +10,8 @@ use time::{format_description::well_known::Iso8601, Date};
 use uuid::Uuid;
 
 use crate::domain::{
-    BoardSnapshot, CreateSubTaskInput, MotherTask, SubTask, UpdateSubTaskInput, ViewMode,
-    ViewSettings,
+    BoardSnapshot, CreateSubTaskInput, MotherSortMode, MotherTask, SubTask, UpdateSubTaskInput,
+    ViewMode, ViewSettings,
 };
 
 const INITIAL_MIGRATION: &str = r#"
@@ -60,7 +60,8 @@ CREATE TABLE view_settings (
 
 INSERT INTO view_settings(singleton_id) VALUES (1);
 "#;
-const LATEST_SCHEMA_VERSION: i64 = 2;
+const LATEST_SCHEMA_VERSION: i64 = 3;
+const MOTHER_TAG_MAX_LENGTH: usize = 40;
 const DEFAULT_TASK_COLUMN_WIDTH: i64 = 348;
 const MIN_TASK_COLUMN_WIDTH: i64 = 240;
 const MAX_TASK_COLUMN_WIDTH: i64 = 600;
@@ -123,25 +124,27 @@ impl Storage {
 
     pub fn load_board(&self) -> Result<BoardSnapshot, StorageError> {
         let mut statement = self.connection.prepare(
-            "SELECT id, name, expanded, sort_order FROM mother_tasks ORDER BY sort_order, id",
+            "SELECT id, name, tag, expanded, sort_order FROM mother_tasks ORDER BY sort_order, id",
         )?;
         let mother_rows = statement.query_map([], |row| {
             Ok((
                 row.get::<_, String>(0)?,
                 row.get::<_, String>(1)?,
-                row.get::<_, bool>(2)?,
-                row.get::<_, i64>(3)?,
+                row.get::<_, Option<String>>(2)?,
+                row.get::<_, bool>(3)?,
+                row.get::<_, i64>(4)?,
             ))
         })?;
 
         let mut tasks = Vec::new();
         for mother_row in mother_rows {
-            let (id, name, expanded, sort_order) = mother_row?;
+            let (id, name, tag, expanded, sort_order) = mother_row?;
             tasks.push(MotherTask {
                 depends_on: self.load_dependencies(&id)?,
                 sub_tasks: self.load_sub_tasks(&id)?,
                 id,
                 name,
+                tag,
                 expanded,
                 sort_order,
             });
@@ -153,20 +156,26 @@ impl Storage {
         })
     }
 
-    pub fn create_mother_task(&mut self, name: &str) -> Result<MotherTask, StorageError> {
+    pub fn create_mother_task(
+        &mut self,
+        name: &str,
+        tag: Option<&str>,
+    ) -> Result<MotherTask, StorageError> {
         let name = validate_name(name)?;
+        let tag = validate_tag(tag)?;
         let transaction = self.connection.transaction()?;
         let sort_order = next_sort_order(&transaction, "mother_tasks", None)?;
         let id = format!("task_{}", Uuid::new_v4().simple());
         transaction.execute(
-            "INSERT INTO mother_tasks(id, name, sort_order) VALUES (?1, ?2, ?3)",
-            params![id, name, sort_order],
+            "INSERT INTO mother_tasks(id, name, tag, sort_order) VALUES (?1, ?2, ?3, ?4)",
+            params![id, name, tag, sort_order],
         )?;
         transaction.commit()?;
 
         Ok(MotherTask {
             id,
             name,
+            tag,
             expanded: true,
             sort_order,
             depends_on: Vec::new(),
@@ -174,11 +183,19 @@ impl Storage {
         })
     }
 
-    pub fn rename_mother_task(&mut self, id: &str, name: &str) -> Result<(), StorageError> {
+    pub fn rename_mother_task(
+        &mut self,
+        id: &str,
+        name: &str,
+        tag: Option<&str>,
+    ) -> Result<(), StorageError> {
         let name = validate_name(name)?;
+        let tag = validate_tag(tag)?;
         let affected = self.connection.execute(
-            "UPDATE mother_tasks SET name = ?2, updated_at = CURRENT_TIMESTAMP WHERE id = ?1",
-            params![id, name],
+            "UPDATE mother_tasks
+             SET name = ?2, tag = ?3, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?1",
+            params![id, name, tag],
         )?;
         require_affected(affected, "mother task")
     }
@@ -361,13 +378,15 @@ impl Storage {
         parse_date(&settings.anchor_date)?;
         self.connection.execute(
             "UPDATE view_settings
-             SET view_mode = ?1, anchor_date = ?2, show_dependencies = ?3, task_column_width = ?4
+             SET view_mode = ?1, anchor_date = ?2, show_dependencies = ?3,
+                 task_column_width = ?4, mother_sort_mode = ?5
              WHERE singleton_id = 1",
             params![
                 settings.view_mode.as_str(),
                 settings.anchor_date,
                 settings.show_dependencies,
-                clamp_task_column_width(settings.task_column_width)
+                clamp_task_column_width(settings.task_column_width),
+                settings.mother_sort_mode.as_str()
             ],
         )?;
         Ok(())
@@ -407,25 +426,34 @@ impl Storage {
     fn load_view_settings(&self) -> Result<ViewSettings, StorageError> {
         self.connection
             .query_row(
-                "SELECT view_mode, anchor_date, show_dependencies, task_column_width
+                "SELECT view_mode, anchor_date, show_dependencies, task_column_width, mother_sort_mode
                  FROM view_settings WHERE singleton_id = 1",
                 [],
                 |row| {
                     let view_mode: String = row.get(0)?;
-                    Ok((view_mode, row.get(1)?, row.get(2)?, row.get(3)?))
+                    Ok((
+                        view_mode,
+                        row.get(1)?,
+                        row.get(2)?,
+                        row.get(3)?,
+                        row.get::<_, String>(4)?,
+                    ))
                 },
             )
             .map_err(StorageError::from)
             .and_then(
-                |(view_mode, anchor_date, show_dependencies, task_column_width)| {
+                |(view_mode, anchor_date, show_dependencies, task_column_width, mother_sort_mode)| {
                     let view_mode = ViewMode::parse(&view_mode).ok_or_else(|| {
                         StorageError::Validation("stored view mode is invalid".to_owned())
                     })?;
+                    let mother_sort_mode = MotherSortMode::parse(&mother_sort_mode)
+                        .ok_or_else(|| StorageError::Validation("stored mother sort mode is invalid".to_owned()))?;
                     Ok(ViewSettings {
                         view_mode,
                         anchor_date,
                         show_dependencies,
                         task_column_width: clamp_task_column_width(task_column_width),
+                        mother_sort_mode,
                     })
                 },
             )
@@ -478,6 +506,25 @@ fn apply_migrations(connection: &mut Connection) -> Result<(), StorageError> {
         )?;
         transaction.commit()?;
     }
+
+    let current_version = connection.query_row(
+        "SELECT COALESCE(MAX(version), 0) FROM schema_migrations",
+        [],
+        |row| row.get::<_, i64>(0),
+    )?;
+    if current_version < 3 {
+        let transaction = connection.transaction()?;
+        transaction.execute_batch(
+            "ALTER TABLE mother_tasks ADD COLUMN tag TEXT;
+             ALTER TABLE view_settings ADD COLUMN mother_sort_mode TEXT NOT NULL DEFAULT 'manual'
+               CHECK (mother_sort_mode IN ('manual', 'tag'));",
+        )?;
+        transaction.execute(
+            "INSERT INTO schema_migrations(version, description) VALUES (3, 'mother task tags and sort mode')",
+            [],
+        )?;
+        transaction.commit()?;
+    }
     Ok(())
 }
 
@@ -493,6 +540,22 @@ fn validate_name(value: &str) -> Result<String, StorageError> {
         ));
     }
     Ok(trimmed.to_owned())
+}
+
+fn validate_tag(value: Option<&str>) -> Result<Option<String>, StorageError> {
+    let Some(value) = value else {
+        return Ok(None);
+    };
+    let tag = value.trim();
+    if tag.is_empty() {
+        return Ok(None);
+    }
+    if tag.chars().count() > MOTHER_TAG_MAX_LENGTH {
+        return Err(StorageError::Validation(format!(
+            "mother task tag cannot exceed {MOTHER_TAG_MAX_LENGTH} characters"
+        )));
+    }
+    Ok(Some(tag.to_owned()))
 }
 
 fn parse_date(value: &str) -> Result<Date, StorageError> {
@@ -665,7 +728,7 @@ mod tests {
         {
             let mut storage = Storage::open(&database_path).expect("open database");
             let mother = storage
-                .create_mother_task("  Product launch  ")
+                .create_mother_task("  Product launch  ", None)
                 .expect("create mother task");
             mother_id = mother.id.clone();
             assert_eq!(mother.name, "Product launch");
@@ -682,7 +745,7 @@ mod tests {
         assert_eq!(board.tasks[0].sub_tasks[0].id, sub_task_id);
 
         reopened
-            .rename_mother_task(&mother_id, "Launch plan")
+            .rename_mother_task(&mother_id, "Launch plan", None)
             .expect("rename mother task");
         reopened
             .set_mother_expanded(&mother_id, false)
@@ -697,11 +760,37 @@ mod tests {
     }
 
     #[test]
+    fn persists_mother_tags_and_tag_sort_mode() {
+        let mut storage = Storage::open_in_memory().expect("open database");
+        let mother = storage
+            .create_mother_task("Tagged plan", Some("  Product  "))
+            .expect("create tagged mother task");
+        assert_eq!(mother.tag.as_deref(), Some("Product"));
+
+        storage
+            .rename_mother_task(&mother.id, "Tagged plan", Some("Roadmap"))
+            .expect("update mother tag");
+        storage
+            .save_view_settings(&ViewSettings {
+                view_mode: ViewMode::Biweek,
+                anchor_date: "2026-09-18".to_owned(),
+                show_dependencies: true,
+                task_column_width: DEFAULT_TASK_COLUMN_WIDTH,
+                mother_sort_mode: MotherSortMode::Tag,
+            })
+            .expect("save tag sort mode");
+
+        let board = storage.load_board().expect("load tagged board");
+        assert_eq!(board.tasks[0].tag.as_deref(), Some("Roadmap"));
+        assert_eq!(board.view_settings.mother_sort_mode, MotherSortMode::Tag);
+    }
+
+    #[test]
     fn reorders_all_mother_tasks_atomically() {
         let mut storage = Storage::open_in_memory().expect("open database");
-        let task_a = storage.create_mother_task("A").expect("create A");
-        let task_b = storage.create_mother_task("B").expect("create B");
-        let task_c = storage.create_mother_task("C").expect("create C");
+        let task_a = storage.create_mother_task("A", None).expect("create A");
+        let task_b = storage.create_mother_task("B", None).expect("create B");
+        let task_c = storage.create_mother_task("C", None).expect("create C");
 
         storage
             .reorder_mother_tasks(&[task_c.id.clone(), task_a.id.clone(), task_b.id.clone()])
@@ -743,7 +832,9 @@ mod tests {
     #[test]
     fn reorders_sub_tasks_within_mother_and_rejects_incomplete_orders() {
         let mut storage = Storage::open_in_memory().expect("open database");
-        let mother = storage.create_mother_task("Mother").expect("create mother");
+        let mother = storage
+            .create_mother_task("Mother", None)
+            .expect("create mother");
         let sub_a = storage
             .create_sub_task(&sub_task_input(&mother.id))
             .expect("create A");
@@ -792,7 +883,7 @@ mod tests {
     fn rejects_invalid_date_ranges_without_writing() {
         let mut storage = Storage::open_in_memory().expect("open database");
         let mother = storage
-            .create_mother_task("Mother")
+            .create_mother_task("Mother", None)
             .expect("create mother task");
         let mut input = sub_task_input(&mother.id);
         input.end_date = Some("2026-09-16".to_owned());
@@ -809,9 +900,9 @@ mod tests {
     #[test]
     fn rejects_cycles_and_preserves_previous_dependencies() {
         let mut storage = Storage::open_in_memory().expect("open database");
-        let task_a = storage.create_mother_task("A").expect("create A");
-        let task_b = storage.create_mother_task("B").expect("create B");
-        let task_c = storage.create_mother_task("C").expect("create C");
+        let task_a = storage.create_mother_task("A", None).expect("create A");
+        let task_b = storage.create_mother_task("B", None).expect("create B");
+        let task_c = storage.create_mother_task("C", None).expect("create C");
 
         storage
             .set_dependencies(&task_b.id, std::slice::from_ref(&task_a.id))
@@ -836,8 +927,8 @@ mod tests {
     #[test]
     fn rejects_self_duplicate_and_unknown_dependencies() {
         let mut storage = Storage::open_in_memory().expect("open database");
-        let task_a = storage.create_mother_task("A").expect("create A");
-        let task_b = storage.create_mother_task("B").expect("create B");
+        let task_a = storage.create_mother_task("A", None).expect("create A");
+        let task_b = storage.create_mother_task("B", None).expect("create B");
 
         let self_error = storage
             .set_dependencies(&task_a.id, std::slice::from_ref(&task_a.id))
@@ -858,8 +949,8 @@ mod tests {
     #[test]
     fn deleting_a_mother_cascades_children_and_dependencies() {
         let mut storage = Storage::open_in_memory().expect("open database");
-        let task_a = storage.create_mother_task("A").expect("create A");
-        let task_b = storage.create_mother_task("B").expect("create B");
+        let task_a = storage.create_mother_task("A", None).expect("create A");
+        let task_b = storage.create_mother_task("B", None).expect("create B");
         storage
             .create_sub_task(&sub_task_input(&task_a.id))
             .expect("create child");
@@ -896,6 +987,7 @@ mod tests {
             anchor_date: "2026-10-01".to_owned(),
             show_dependencies: false,
             task_column_width: 420,
+            mother_sort_mode: MotherSortMode::Manual,
         };
 
         storage
@@ -916,6 +1008,7 @@ mod tests {
             anchor_date: "2026-09-18".to_owned(),
             show_dependencies: true,
             task_column_width: 900,
+            mother_sort_mode: MotherSortMode::Manual,
         };
         storage
             .save_view_settings(&settings)

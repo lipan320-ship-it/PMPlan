@@ -15,6 +15,8 @@ import {
   type UpdateSubTaskInput,
   type ViewSettings,
   clampTaskColumnWidth,
+  MOTHER_TAG_MAX_LENGTH,
+  normalizeMotherTag,
 } from "../domain/models";
 import type { StorageGateway } from "./gateway";
 import { exportBoardJson, prepareJsonImport } from "../transfer/jsonTransfer";
@@ -34,6 +36,14 @@ function requiredName(value: string): string {
   return name;
 }
 
+function optionalTag(value: string | null | undefined): string | null {
+  const tag = normalizeMotherTag(value);
+  if (tag && tag.length > MOTHER_TAG_MAX_LENGTH) {
+    throw new DomainError("validation_error", `标签不能超过 ${MOTHER_TAG_MAX_LENGTH} 个字符。`);
+  }
+  return tag;
+}
+
 export class MemoryStorageGateway implements StorageGateway {
   private board: BoardSnapshot;
   private nextId = 1;
@@ -50,6 +60,7 @@ export class MemoryStorageGateway implements StorageGateway {
     const task: MotherTask = {
       id: `memory_task_${this.nextId++}`,
       name: requiredName(input.name),
+      tag: optionalTag(input.tag),
       expanded: true,
       sortOrder: this.board.tasks.length,
       dependsOn: [],
@@ -62,6 +73,9 @@ export class MemoryStorageGateway implements StorageGateway {
   async renameMotherTask(input: RenameMotherTaskInput): Promise<void> {
     const task = this.requireMother(input.id);
     task.name = requiredName(input.name);
+    if (input.tag !== undefined) {
+      task.tag = optionalTag(input.tag);
+    }
   }
 
   async setMotherExpanded(input: SetMotherExpandedInput): Promise<void> {
@@ -156,6 +170,7 @@ export class MemoryStorageGateway implements StorageGateway {
     this.board.viewSettings = structuredClone({
       ...settings,
       taskColumnWidth: clampTaskColumnWidth(settings.taskColumnWidth),
+      motherSortMode: settings.motherSortMode ?? "manual",
     });
   }
 

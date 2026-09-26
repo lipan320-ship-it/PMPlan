@@ -68,7 +68,7 @@ pub fn create_mother_task(
     state: State<'_, AppState>,
     input: CreateMotherTaskInput,
 ) -> Result<MotherTask, CommandError> {
-    state.with_storage(|storage| storage.create_mother_task(&input.name))
+    state.with_storage(|storage| storage.create_mother_task(&input.name, input.tag.as_deref()))
 }
 
 #[tauri::command(async)]
@@ -76,7 +76,9 @@ pub fn rename_mother_task(
     state: State<'_, AppState>,
     input: RenameMotherTaskInput,
 ) -> Result<(), CommandError> {
-    state.with_storage(|storage| storage.rename_mother_task(&input.id, &input.name))
+    state.with_storage(|storage| {
+        storage.rename_mother_task(&input.id, &input.name, input.tag.as_deref())
+    })
 }
 
 #[tauri::command(async)]
