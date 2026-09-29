@@ -1010,7 +1010,7 @@ fn apply_migrations(connection: &mut Connection) -> Result<(), StorageError> {
 fn now_unix() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map(|value| value.as_secs() as i64)
+        .map(|value| value.as_nanos() as i64)
         .unwrap_or_default()
 }
 
@@ -1405,7 +1405,9 @@ mod tests {
             assert_eq!(a_settings.view_mode, ViewMode::Week);
             assert_eq!(a_settings.anchor_date, "2026-01-05");
             assert!(!a_settings.show_dependencies);
-            storage.open_project(&project_b).expect("restore B as last project");
+            storage
+                .open_project(&project_b)
+                .expect("restore B as last project");
         }
 
         let reopened = Storage::open(&database_path).expect("reopen database");
