@@ -1799,6 +1799,14 @@ function ProjectSelector({
                 另存为
               </button>
             </div>
+            {state?.workspaceMode === "unnamedLegacy" ? (
+              <div className="project-selector__save-actions">
+                <span>当前是未命名本地工作区，建议另存为 JSON 项目文件。</span>
+                <button className="text-button" disabled={busy} onClick={onSaveAs} type="button">
+                  开始迁移
+                </button>
+              </div>
+            ) : null}
             {state?.saveStatus === "conflict" || state?.saveStatus === "error" || state?.saveStatus === "unsaved" ? (
               <div className="project-selector__save-actions">
                 <span>{state.lastError ?? "当前项目尚未写入文件"}</span>
