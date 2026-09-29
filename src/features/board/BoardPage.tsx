@@ -1448,21 +1448,21 @@ export function BoardPage({ gateway }: BoardPageProps) {
                 {viewLabels[viewMode]}
               </button>
             ))}
+            <button
+              aria-pressed={quarterOverview}
+              className={
+                quarterOverview
+                  ? "segmented-control__item is-active"
+                  : "segmented-control__item"
+              }
+              disabled={busy}
+              onClick={() => setQuarterOverview((current) => !current)}
+              title="连续 90–92 天总览；拖动主体或边缘调整日期，点击任务条进入精确编辑"
+              type="button"
+            >
+              季度
+            </button>
           </div>
-          <button
-            aria-pressed={quarterOverview}
-            className={
-              quarterOverview
-                ? "segmented-control__item is-active quarter-overview-toggle"
-                : "segmented-control__item quarter-overview-toggle"
-            }
-            disabled={busy}
-            onClick={() => setQuarterOverview((current) => !current)}
-            title="连续 90–92 天总览；拖动主体或边缘调整日期，点击任务条进入精确编辑"
-            type="button"
-          >
-            季度总览
-          </button>
           <div className="segmented-control mother-sort-control" aria-label="母任务排序">
             {(["manual", "tag"] as MotherSortMode[]).map((sortMode) => (
               <button

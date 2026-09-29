@@ -57,12 +57,27 @@ describe("quarter overview integration", () => {
     render(<App gateway={gateway} />);
 
     await screen.findByText("季度规划");
-    const toggle = screen.getByRole("button", { name: "季度总览" });
+    const viewControl = document.querySelector('[aria-label="视图模式"]');
+    expect(viewControl).not.toBeNull();
+    const viewButtons = Array.from(viewControl?.querySelectorAll("button") ?? []);
+    expect(viewButtons.map((button) => button.textContent)).toEqual([
+      "周",
+      "双周",
+      "月",
+      "季度",
+    ]);
+    expect(viewButtons.filter((button) => button.getAttribute("aria-pressed") === "true"))
+      .toHaveLength(1);
+
+    const toggle = screen.getByRole("button", { name: "季度" });
     expect(toggle).toHaveAttribute("aria-pressed", "false");
 
     await user.click(toggle);
 
     expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(toggle).toHaveClass("is-active");
+    expect(viewButtons.filter((button) => button.getAttribute("aria-pressed") === "true"))
+      .toHaveLength(1);
     const range = getQuarterOverviewRange(ANCHOR_DATE);
     expect(range.dates.length).toBeGreaterThanOrEqual(90);
     expect(range.dates.length).toBeLessThanOrEqual(92);
@@ -130,7 +145,7 @@ describe("quarter overview integration", () => {
     render(<App gateway={gateway} />);
 
     await screen.findByText("季度规划");
-    await user.click(screen.getByRole("button", { name: "季度总览" }));
+    await user.click(screen.getByRole("button", { name: "季度" }));
     await user.click(screen.getByRole("button", { name: "下一周期" }));
 
     await waitFor(async () => {
@@ -156,7 +171,7 @@ describe("quarter overview integration", () => {
     render(<App gateway={gateway} />);
 
     await screen.findByText("季度规划");
-    await userEvent.setup().click(screen.getByRole("button", { name: "季度总览" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "季度" }));
 
     const bar = screen.getByTestId(`quarter-subtask-${SUBTASK_ID}`);
     fireEvent.pointerDown(bar, { button: 0, clientX: 400, pointerId: 7 });
@@ -194,7 +209,7 @@ describe("quarter overview integration", () => {
     render(<App gateway={gateway} />);
 
     await screen.findByText("季度规划");
-    await userEvent.setup().click(screen.getByRole("button", { name: "季度总览" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "季度" }));
 
     const bar = screen.getByTestId(`quarter-subtask-${SUBTASK_ID}`);
     expect(Number.parseFloat(bar.style.width)).toBeGreaterThanOrEqual(24);
@@ -216,7 +231,7 @@ describe("quarter overview integration", () => {
     render(<App gateway={gateway} />);
 
     await screen.findByText("季度规划");
-    await userEvent.setup().click(screen.getByRole("button", { name: "季度总览" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "季度" }));
 
     let bar = screen.getByTestId(`quarter-subtask-${SUBTASK_ID}`);
     const startEdge = getQuarterEdge(bar, "start");
@@ -262,7 +277,7 @@ describe("quarter overview integration", () => {
     const { unmount } = render(<App gateway={leftGateway} />);
 
     await screen.findByText("季度规划");
-    await userEvent.setup().click(screen.getByRole("button", { name: "季度总览" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "季度" }));
 
     let bar = screen.getByTestId(`quarter-subtask-${SUBTASK_ID}`);
     const startEdge = getQuarterEdge(bar, "start");
@@ -291,7 +306,7 @@ describe("quarter overview integration", () => {
     render(<App gateway={rightGateway} />);
 
     await screen.findByText("季度规划");
-    await userEvent.setup().click(screen.getByRole("button", { name: "季度总览" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "季度" }));
 
     bar = screen.getByTestId(`quarter-subtask-${SUBTASK_ID}`);
     const endEdge = getQuarterEdge(bar, "end");
@@ -315,7 +330,7 @@ describe("quarter overview integration", () => {
     render(<App gateway={gateway} />);
 
     await screen.findByText("季度规划");
-    await userEvent.setup().click(screen.getByRole("button", { name: "季度总览" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "季度" }));
 
     let bar = screen.getByTestId(`quarter-subtask-${SUBTASK_ID}`);
     const startEdge = getQuarterEdge(bar, "start");

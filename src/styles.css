@@ -472,6 +472,7 @@ input:focus-visible {
   border: 1px solid var(--border);
   border-radius: 10px;
   background: #ebf0f8;
+  white-space: nowrap;
 }
 
 .segmented-control__item {
@@ -893,12 +894,6 @@ input:focus-visible {
   font-weight: 750;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.quarter-overview-toggle {
-  margin-left: 2px;
-  border: 1px solid var(--border);
-  background: #ebf0f8;
 }
 
 .date-cell {
