@@ -7,7 +7,7 @@ use std::{
 
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
 use thiserror::Error;
-use time::{format_description::well_known::Iso8601, Date};
+use time::{format_description::well_known::Iso8601, Date, OffsetDateTime};
 use uuid::Uuid;
 
 use crate::domain::{
@@ -267,9 +267,10 @@ impl Storage {
         }
 
         self.set_active_project(&normalized, &fingerprint, ProjectSaveStatus::Saved, None)?;
-        if let Some(settings) = self.load_project_view_settings(&normalized)? {
-            self.save_runtime_view_settings(&settings)?;
-        }
+        let settings = self
+            .load_project_view_settings(&normalized)?
+            .unwrap_or_else(default_view_settings);
+        self.save_runtime_view_settings(&settings)?;
         self.project_state()
     }
 
@@ -1013,6 +1014,19 @@ fn now_unix() -> i64 {
         .unwrap_or_default()
 }
 
+fn default_view_settings() -> ViewSettings {
+    ViewSettings {
+        view_mode: ViewMode::Biweek,
+        anchor_date: OffsetDateTime::now_utc()
+            .date()
+            .format(&Iso8601::DATE)
+            .unwrap_or_else(|_| "1970-01-01".to_owned()),
+        show_dependencies: true,
+        task_column_width: DEFAULT_TASK_COLUMN_WIDTH,
+        mother_sort_mode: MotherSortMode::Manual,
+    }
+}
+
 fn parse_workspace_mode(value: &str) -> Result<WorkspaceMode, StorageError> {
     match value {
         "named_project" => Ok(WorkspaceMode::NamedProject),
@@ -1352,6 +1366,15 @@ mod tests {
             let mut storage = Storage::open(&database_path).expect("open database");
             storage.open_project(&project_a).expect("open A");
             storage
+                .save_view_settings(&ViewSettings {
+                    view_mode: ViewMode::Week,
+                    anchor_date: "2026-01-05".to_owned(),
+                    show_dependencies: false,
+                    task_column_width: DEFAULT_TASK_COLUMN_WIDTH,
+                    mother_sort_mode: MotherSortMode::Manual,
+                })
+                .expect("save A view");
+            storage
                 .create_mother_task("A task", None)
                 .expect("save A task");
             assert!(fs::read_to_string(&project_a)
@@ -1359,6 +1382,14 @@ mod tests {
                 .contains("A task"));
 
             storage.open_project(&project_b).expect("open B");
+            assert_eq!(
+                storage
+                    .load_board()
+                    .expect("load B settings")
+                    .view_settings
+                    .view_mode,
+                ViewMode::Biweek
+            );
             storage
                 .create_mother_task("B task", None)
                 .expect("save B task");
@@ -1368,6 +1399,13 @@ mod tests {
             assert!(!fs::read_to_string(&project_a)
                 .expect("read A again")
                 .contains("B task"));
+
+            storage.open_project(&project_a).expect("reopen A");
+            let a_settings = storage.load_board().expect("load A settings").view_settings;
+            assert_eq!(a_settings.view_mode, ViewMode::Week);
+            assert_eq!(a_settings.anchor_date, "2026-01-05");
+            assert!(!a_settings.show_dependencies);
+            storage.open_project(&project_b).expect("restore B as last project");
         }
 
         let reopened = Storage::open(&database_path).expect("reopen database");
