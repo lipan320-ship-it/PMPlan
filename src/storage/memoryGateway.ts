@@ -19,6 +19,7 @@ import {
   normalizeMotherTag,
 } from "../domain/models";
 import type { StorageGateway } from "./gateway";
+import type { ProjectState, RecentProject } from "./projectTypes";
 import { exportBoardJson, prepareJsonImport } from "../transfer/jsonTransfer";
 import type {
   ExportResponse,
@@ -47,13 +48,75 @@ function optionalTag(value: string | null | undefined): string | null {
 export class MemoryStorageGateway implements StorageGateway {
   private board: BoardSnapshot;
   private nextId = 1;
+  private readonly projects = new Map<string, BoardSnapshot>();
+  private projectState: ProjectState = {
+    activePath: null,
+    activeName: null,
+    parentPath: null,
+    workspaceMode: "unnamedLegacy",
+    saveStatus: "saved",
+    lastError: null,
+    recent: [],
+  };
 
   constructor(initialBoard: BoardSnapshot) {
     this.board = structuredClone(initialBoard);
   }
 
   async loadBoard(): Promise<BoardSnapshot> {
+    this.syncActiveProject();
     return structuredClone(this.board);
+  }
+
+  async getProjectState(): Promise<ProjectState> {
+    this.syncActiveProject();
+    return structuredClone(this.projectState);
+  }
+
+  async openProject(path: string): Promise<ProjectState> {
+    const normalized = normalizeMemoryPath(path);
+    const project = this.projects.get(normalized);
+    if (!project) {
+      throw new DomainError("not_found", "项目文件不存在或尚未创建");
+    }
+    this.board = structuredClone(project);
+    this.activateProject(normalized);
+    return this.getProjectState();
+  }
+
+  async createProject(path: string): Promise<ProjectState> {
+    const normalized = normalizeMemoryPath(path);
+    if (this.projects.has(normalized)) {
+      throw new DomainError("conflict", "项目文件已经存在");
+    }
+    this.projects.set(normalized, structuredClone({ ...this.board, tasks: [] }));
+    this.board = structuredClone(this.projects.get(normalized)!);
+    this.activateProject(normalized);
+    return this.getProjectState();
+  }
+
+  async saveActiveProject(): Promise<ProjectState> {
+    if (!this.projectState.activePath) {
+      throw new DomainError("validation_error", "请先选择项目文件");
+    }
+    this.syncActiveProject();
+    this.projectState = { ...this.projectState, saveStatus: "saved", lastError: null };
+    return this.getProjectState();
+  }
+
+  async saveAsProject(path: string): Promise<ProjectState> {
+    const normalized = normalizeMemoryPath(path);
+    this.projects.set(normalized, structuredClone(this.board));
+    this.activateProject(normalized);
+    return this.getProjectState();
+  }
+
+  async removeRecentProject(path: string): Promise<void> {
+    const normalized = normalizeMemoryPath(path);
+    this.projectState = {
+      ...this.projectState,
+      recent: this.projectState.recent.filter((item) => item.path !== normalized),
+    };
   }
 
   async createMotherTask(input: CreateMotherTaskInput): Promise<MotherTask> {
@@ -67,6 +130,7 @@ export class MemoryStorageGateway implements StorageGateway {
       subTasks: [],
     };
     this.board.tasks.push(task);
+    this.syncActiveProject();
     return structuredClone(task);
   }
 
@@ -76,10 +140,12 @@ export class MemoryStorageGateway implements StorageGateway {
     if (input.tag !== undefined) {
       task.tag = optionalTag(input.tag);
     }
+    this.syncActiveProject();
   }
 
   async setMotherExpanded(input: SetMotherExpandedInput): Promise<void> {
     this.requireMother(input.id).expanded = input.expanded;
+    this.syncActiveProject();
   }
 
   async reorderMotherTasks(input: ReorderMotherTasksInput): Promise<void> {
@@ -100,6 +166,7 @@ export class MemoryStorageGateway implements StorageGateway {
       ...tasksById.get(id)!,
       sortOrder,
     }));
+    this.syncActiveProject();
   }
 
   async reorderSubTasks(input: ReorderSubTasksInput): Promise<void> {
@@ -121,6 +188,7 @@ export class MemoryStorageGateway implements StorageGateway {
       ...subTasksById.get(id)!,
       sortOrder,
     }));
+    this.syncActiveProject();
   }
 
   async deleteMotherTask(id: string): Promise<void> {
@@ -129,6 +197,7 @@ export class MemoryStorageGateway implements StorageGateway {
     for (const task of this.board.tasks) {
       task.dependsOn = task.dependsOn.filter((dependencyId) => dependencyId !== id);
     }
+    this.syncActiveProject();
   }
 
   async createSubTask(input: CreateSubTaskInput): Promise<SubTask> {
@@ -143,6 +212,7 @@ export class MemoryStorageGateway implements StorageGateway {
       sortOrder: mother.subTasks.length,
     };
     mother.subTasks.push(subTask);
+    this.syncActiveProject();
     return structuredClone(subTask);
   }
 
@@ -152,17 +222,20 @@ export class MemoryStorageGateway implements StorageGateway {
     subTask.name = requiredName(input.name);
     subTask.startDate = input.startDate;
     subTask.endDate = input.endDate;
+    this.syncActiveProject();
   }
 
   async deleteSubTask(id: string): Promise<void> {
     const subTask = this.requireSubTask(id);
     const mother = this.requireMother(subTask.motherTaskId);
     mother.subTasks = mother.subTasks.filter((task) => task.id !== id);
+    this.syncActiveProject();
   }
 
   async setDependencies(input: SetDependenciesInput): Promise<string[]> {
     validateDependencyChange(this.board.tasks, input.taskId, input.dependsOn);
     this.requireMother(input.taskId).dependsOn = [...input.dependsOn];
+    this.syncActiveProject();
     return [...input.dependsOn];
   }
 
@@ -172,6 +245,7 @@ export class MemoryStorageGateway implements StorageGateway {
       taskColumnWidth: clampTaskColumnWidth(settings.taskColumnWidth),
       motherSortMode: settings.motherSortMode ?? "manual",
     });
+    this.syncActiveProject();
   }
 
   async analyzeImport(
@@ -208,6 +282,7 @@ export class MemoryStorageGateway implements StorageGateway {
     }
     this.board = prepared.board;
     this.nextId = nextId;
+    this.syncActiveProject();
     return {
       motherTaskCount: prepared.preview.motherTaskCount,
       subTaskCount: prepared.preview.subTaskCount,
@@ -234,6 +309,38 @@ export class MemoryStorageGateway implements StorageGateway {
     return mother;
   }
 
+  private activateProject(path: string): void {
+    const segments = path.split(/[\\/]/);
+    const name = segments.at(-1) ?? path;
+    const parentPath = segments.slice(0, -1).join("/");
+    const recent: RecentProject[] = [
+      {
+        path,
+        name,
+        parentPath,
+        status: "available" as const,
+        lastError: null,
+      },
+      ...this.projectState.recent.filter((item) => item.path !== path),
+    ].slice(0, 8);
+    this.projectState = {
+      ...this.projectState,
+      activePath: path,
+      activeName: name,
+      parentPath,
+      workspaceMode: "namedProject",
+      saveStatus: "saved",
+      lastError: null,
+      recent,
+    };
+  }
+
+  private syncActiveProject(): void {
+    if (this.projectState.activePath) {
+      this.projects.set(this.projectState.activePath, structuredClone(this.board));
+    }
+  }
+
   private requireSubTask(id: string): SubTask {
     for (const mother of this.board.tasks) {
       const subTask = mother.subTasks.find((task) => task.id === id);
@@ -253,4 +360,8 @@ export class MemoryStorageGateway implements StorageGateway {
     }
     return source.value;
   }
+}
+
+function normalizeMemoryPath(path: string): string {
+  return path.trim().replaceAll("\\", "/").replace(/\/+/g, "/");
 }

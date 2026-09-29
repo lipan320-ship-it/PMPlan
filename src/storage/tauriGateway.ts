@@ -21,10 +21,35 @@ import type {
   TransferResult,
 } from "../transfer/types";
 import type { StorageGateway } from "./gateway";
+import type { ProjectState } from "./projectTypes";
 
 export class TauriStorageGateway implements StorageGateway {
   loadBoard(): Promise<BoardSnapshot> {
     return invoke("load_board");
+  }
+
+  getProjectState(): Promise<ProjectState> {
+    return invoke("get_project_state");
+  }
+
+  openProject(path: string): Promise<ProjectState> {
+    return invoke("open_project", { path });
+  }
+
+  createProject(path: string): Promise<ProjectState> {
+    return invoke("create_project", { path });
+  }
+
+  saveActiveProject(): Promise<ProjectState> {
+    return invoke("save_active_project");
+  }
+
+  saveAsProject(path: string): Promise<ProjectState> {
+    return invoke("save_as_project", { path });
+  }
+
+  removeRecentProject(path: string): Promise<void> {
+    return invoke("remove_recent_project", { path });
   }
 
   createMotherTask(input: CreateMotherTaskInput): Promise<MotherTask> {

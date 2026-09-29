@@ -5,7 +5,7 @@ use tauri::State;
 
 use crate::{
     domain::{
-        BoardSnapshot, CreateMotherTaskInput, CreateSubTaskInput, MotherTask,
+        BoardSnapshot, CreateMotherTaskInput, CreateSubTaskInput, MotherTask, ProjectState,
         RenameMotherTaskInput, ReorderMotherTasksInput, ReorderSubTasksInput, SetDependenciesInput,
         SetMotherExpandedInput, SubTask, UpdateSubTaskInput, ViewSettings,
     },
@@ -53,6 +53,9 @@ impl From<StorageError> for CommandError {
             StorageError::Migration(_) => "local database schema is not supported".to_owned(),
             StorageError::Database(_) => "local database operation failed".to_owned(),
             StorageError::Io(_) => "local data directory is unavailable".to_owned(),
+            StorageError::ProjectConflict(message) | StorageError::ProjectFile(message) => {
+                message.clone()
+            }
         };
         Self { code, message }
     }
@@ -61,6 +64,45 @@ impl From<StorageError> for CommandError {
 #[tauri::command(async)]
 pub fn load_board(state: State<'_, AppState>) -> Result<BoardSnapshot, CommandError> {
     state.with_storage(|storage| storage.load_board())
+}
+
+#[tauri::command(async)]
+pub fn get_project_state(state: State<'_, AppState>) -> Result<ProjectState, CommandError> {
+    state.with_storage(|storage| storage.project_state())
+}
+
+#[tauri::command(async)]
+pub fn open_project(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<ProjectState, CommandError> {
+    state.with_storage(|storage| storage.open_project(Path::new(&path)))
+}
+
+#[tauri::command(async)]
+pub fn create_project(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<ProjectState, CommandError> {
+    state.with_storage(|storage| storage.create_project(Path::new(&path)))
+}
+
+#[tauri::command(async)]
+pub fn save_active_project(state: State<'_, AppState>) -> Result<ProjectState, CommandError> {
+    state.with_storage(|storage| storage.save_active_project())
+}
+
+#[tauri::command(async)]
+pub fn save_as_project(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<ProjectState, CommandError> {
+    state.with_storage(|storage| storage.save_as_project(Path::new(&path)))
+}
+
+#[tauri::command(async)]
+pub fn remove_recent_project(state: State<'_, AppState>, path: String) -> Result<(), CommandError> {
+    state.with_storage(|storage| storage.remove_recent_project(Path::new(&path)))
 }
 
 #[tauri::command(async)]

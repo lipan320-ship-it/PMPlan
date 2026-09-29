@@ -467,4 +467,27 @@ describe("App", () => {
     expect(writeText).toHaveBeenCalledWith(templateValue);
     expect(await screen.findByText("导入模板已复制")).toBeInTheDocument();
   });
+
+  it("switches between recent projects without merging their boards", async () => {
+    const user = userEvent.setup();
+    const gateway = new MemoryStorageGateway(createEmptyBoard());
+    await gateway.createProject("A.json");
+    await gateway.createMotherTask({ name: "A plan" });
+    await gateway.createProject("B.json");
+    await gateway.createMotherTask({ name: "B plan" });
+    render(<App gateway={gateway} />);
+
+    expect(await screen.findByText("B plan")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /B\.json/ }));
+    const projectAButtons = screen.getAllByRole("button", { name: /A\.json/ });
+    const projectA = projectAButtons.find((button) => !button.hasAttribute("aria-label"));
+    if (!projectA) {
+      throw new Error("recent project A button missing");
+    }
+    await user.click(projectA);
+
+    expect(await screen.findByText("A plan")).toBeInTheDocument();
+    expect(screen.queryByText("B plan")).toBeNull();
+    expect((await gateway.loadBoard()).tasks.map((task) => task.name)).toEqual(["A plan"]);
+  });
 });

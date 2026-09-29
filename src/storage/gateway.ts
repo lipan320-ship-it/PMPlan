@@ -19,9 +19,16 @@ import type {
   ImportSource,
   TransferResult,
 } from "../transfer/types";
+import type { ProjectState } from "./projectTypes";
 
 export interface StorageGateway {
   loadBoard(): Promise<BoardSnapshot>;
+  getProjectState(): Promise<ProjectState>;
+  openProject(path: string): Promise<ProjectState>;
+  createProject(path: string): Promise<ProjectState>;
+  saveActiveProject(): Promise<ProjectState>;
+  saveAsProject(path: string): Promise<ProjectState>;
+  removeRecentProject(path: string): Promise<void>;
   createMotherTask(input: CreateMotherTaskInput): Promise<MotherTask>;
   renameMotherTask(input: RenameMotherTaskInput): Promise<void>;
   setMotherExpanded(input: SetMotherExpandedInput): Promise<void>;

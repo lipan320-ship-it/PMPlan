@@ -42,6 +42,7 @@ import {
   type DependencyConflict,
 } from "../../domain/schedule";
 import type { StorageGateway } from "../../storage/gateway";
+import type { ProjectState, RecentProject } from "../../storage/projectTypes";
 import type {
   ImportMode,
   ImportPreview,
@@ -432,6 +433,8 @@ function getEarliestStartDate(tasks: MotherTask[]): DateOnly | null {
 
 export function BoardPage({ gateway }: BoardPageProps) {
   const [board, setBoard] = useState<BoardSnapshot | null>(null);
+  const [projectState, setProjectState] = useState<ProjectState | null>(null);
+  const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
@@ -479,12 +482,21 @@ export function BoardPage({ gateway }: BoardPageProps) {
     }
   };
 
+  const reloadProjectState = async () => {
+    try {
+      setProjectState(await gateway.getProjectState());
+    } catch (error) {
+      setToast({ tone: "error", message: messageFromError(error) });
+    }
+  };
+
   useEffect(() => {
     let active = true;
-    void gateway.loadBoard().then(
-      (snapshot) => {
+    void Promise.all([gateway.loadBoard(), gateway.getProjectState()]).then(
+      ([snapshot, state]) => {
         if (active) {
           setBoard(snapshot);
+          setProjectState(state);
         }
       },
       (error: unknown) => {
@@ -580,6 +592,8 @@ export function BoardPage({ gateway }: BoardPageProps) {
       setToast({ tone: "success", message: successMessage });
       return true;
     } catch (error) {
+      await reloadBoard();
+      await reloadProjectState();
       setToast({ tone: "error", message: messageFromError(error) });
       return false;
     } finally {
@@ -1013,6 +1027,119 @@ export function BoardPage({ gateway }: BoardPageProps) {
     }
   };
 
+  const reloadAfterProjectAction = async (state: ProjectState) => {
+    setProjectState(state);
+    setBoard(await gateway.loadBoard());
+    setQuarterOverview(false);
+    setProjectMenuOpen(false);
+  };
+
+  const openProjectPath = async (path: string) => {
+    setBusy(true);
+    try {
+      const state = await gateway.openProject(path);
+      await reloadAfterProjectAction(state);
+      setToast({ tone: "success", message: `已打开项目：${state.activeName ?? path}` });
+    } catch (error) {
+      await reloadProjectState();
+      setToast({ tone: "error", message: messageFromError(error) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleOpenProject = async () => {
+    if (!isTauri()) {
+      setToast({ tone: "error", message: "浏览器预览模式请先用项目菜单创建或选择内存项目" });
+      return;
+    }
+    const selected = await open({
+      directory: false,
+      multiple: false,
+      filters: [{ name: "JSON 项目文件", extensions: ["json"] }],
+    });
+    if (typeof selected === "string") {
+      await openProjectPath(selected);
+    }
+  };
+
+  const handleCreateProject = async () => {
+    if (!isTauri()) {
+      setToast({ tone: "error", message: "浏览器预览模式不支持选择项目文件路径" });
+      return;
+    }
+    const selected = await save({
+      defaultPath: `工作规划时间板_${todayDateOnly()}.json`,
+      filters: [{ name: "JSON 项目文件", extensions: ["json"] }],
+    });
+    if (!selected) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const state = await gateway.createProject(selected);
+      await reloadAfterProjectAction(state);
+      setToast({ tone: "success", message: `已新建项目：${state.activeName ?? selected}` });
+    } catch (error) {
+      setToast({ tone: "error", message: messageFromError(error) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSaveAsProject = async () => {
+    if (!isTauri()) {
+      setToast({ tone: "error", message: "浏览器预览模式不支持选择项目文件路径" });
+      return;
+    }
+    const selected = await save({
+      defaultPath: `工作规划时间板_${todayDateOnly()}.json`,
+      filters: [{ name: "JSON 项目文件", extensions: ["json"] }],
+    });
+    if (!selected) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const state = await gateway.saveAsProject(selected);
+      await reloadAfterProjectAction(state);
+      setToast({ tone: "success", message: `项目已另存为：${state.activeName ?? selected}` });
+    } catch (error) {
+      setToast({ tone: "error", message: messageFromError(error) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRetryProjectSave = async () => {
+    setBusy(true);
+    try {
+      const state = await gateway.saveActiveProject();
+      await reloadAfterProjectAction(state);
+      setToast({ tone: "success", message: "项目文件已保存" });
+    } catch (error) {
+      await reloadProjectState();
+      setToast({ tone: "error", message: messageFromError(error) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleReloadExternalProject = async () => {
+    if (projectState?.activePath) {
+      await openProjectPath(projectState.activePath);
+    }
+  };
+
+  const handleRemoveRecentProject = async (recent: RecentProject) => {
+    try {
+      await gateway.removeRecentProject(recent.path);
+      await reloadProjectState();
+    } catch (error) {
+      setToast({ tone: "error", message: messageFromError(error) });
+    }
+  };
+
   const analyzeImport = async (source: ImportSource, mode: ImportMode) => {
     setBusy(true);
     try {
@@ -1090,6 +1217,7 @@ export function BoardPage({ gateway }: BoardPageProps) {
         loaded = { ...loaded, viewSettings: settings };
       }
       setBoard(loaded);
+      await reloadProjectState();
       setImportState(null);
       setConfirmOverwrite(false);
       setToast({
@@ -1221,6 +1349,19 @@ export function BoardPage({ gateway }: BoardPageProps) {
       onDrop={handleDrop}
     >
       <PlannerHeader />
+      <ProjectSelector
+        busy={busy}
+        onCreate={handleCreateProject}
+        onOpen={handleOpenProject}
+        onRemoveRecent={handleRemoveRecentProject}
+        onReloadExternal={handleReloadExternalProject}
+        onRetrySave={handleRetryProjectSave}
+        onSaveAs={handleSaveAsProject}
+        onSelectRecent={(recent) => void openProjectPath(recent.path)}
+        onToggle={() => setProjectMenuOpen((current) => !current)}
+        open={projectMenuOpen}
+        state={projectState}
+      />
       <section className="planner-toolbar" aria-label="时间板工具栏">
         <div className="period-controls">
           <button
@@ -1578,6 +1719,131 @@ export function BoardPage({ gateway }: BoardPageProps) {
         </div>
       ) : null}
     </main>
+  );
+}
+
+interface ProjectSelectorProps {
+  busy: boolean;
+  open: boolean;
+  state: ProjectState | null;
+  onToggle: () => void;
+  onOpen: () => void;
+  onCreate: () => void;
+  onSaveAs: () => void;
+  onRetrySave: () => void;
+  onReloadExternal: () => void;
+  onSelectRecent: (recent: RecentProject) => void;
+  onRemoveRecent: (recent: RecentProject) => void;
+}
+
+function ProjectSelector({
+  busy,
+  open,
+  state,
+  onToggle,
+  onOpen,
+  onCreate,
+  onSaveAs,
+  onRetrySave,
+  onReloadExternal,
+  onSelectRecent,
+  onRemoveRecent,
+}: ProjectSelectorProps) {
+  const activeName = state?.activeName ?? "未命名规划";
+  const statusLabel = {
+    saved: "已保存",
+    saving: "保存中",
+    unsaved: "未保存",
+    conflict: "外部已修改",
+    error: "保存失败",
+  }[state?.saveStatus ?? "saved"];
+  const recentStatusLabel = {
+    available: "可用",
+    missing: "文件不存在",
+    unreadable: "无法读取",
+    invalid: "格式无效",
+    conflict: "存在冲突",
+  } as const;
+
+  return (
+    <section className="project-selector" aria-label="项目规划">
+      <div className="project-selector__current">
+        <button
+          aria-expanded={open}
+          aria-haspopup="menu"
+          className="project-selector__trigger"
+          disabled={busy}
+          onClick={onToggle}
+          type="button"
+        >
+          <span className="project-selector__icon" aria-hidden="true">⌂</span>
+          <span className="project-selector__label">
+            <strong>{activeName}</strong>
+            <small>{state?.parentPath ?? "尚未选择项目文件"}</small>
+          </span>
+          <span className={`project-selector__status project-selector__status--${state?.saveStatus ?? "saved"}`}>
+            {statusLabel}
+          </span>
+          <span aria-hidden="true">⌄</span>
+        </button>
+        {open ? (
+          <div className="project-selector__menu" role="menu">
+            <div className="project-selector__menu-actions">
+              <button className="button button--quiet" disabled={busy} onClick={onOpen} type="button">
+                打开项目
+              </button>
+              <button className="button button--quiet" disabled={busy} onClick={onCreate} type="button">
+                新建项目
+              </button>
+              <button className="button button--quiet" disabled={busy} onClick={onSaveAs} type="button">
+                另存为
+              </button>
+            </div>
+            {state?.saveStatus === "conflict" || state?.saveStatus === "error" || state?.saveStatus === "unsaved" ? (
+              <div className="project-selector__save-actions">
+                <span>{state.lastError ?? "当前项目尚未写入文件"}</span>
+                <button className="text-button" disabled={busy} onClick={onRetrySave} type="button">
+                  重试保存
+                </button>
+                {state.saveStatus === "conflict" ? (
+                  <button className="text-button" disabled={busy} onClick={onReloadExternal} type="button">
+                    重新加载外部文件
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+            <div className="project-selector__recent-title">最近打开</div>
+            {state?.recent.length ? (
+              state.recent.map((recent) => (
+                <div className="project-selector__recent" key={recent.path} role="menuitem">
+                  <button
+                    className="project-selector__recent-main"
+                    disabled={busy || recent.status !== "available"}
+                    onClick={() => onSelectRecent(recent)}
+                    type="button"
+                  >
+                    <strong>{recent.name}</strong>
+                    <small>{recent.parentPath}</small>
+                    <em>{recentStatusLabel[recent.status]}</em>
+                  </button>
+                  <button
+                    aria-label={`移除最近记录 ${recent.name}`}
+                    className="project-selector__remove"
+                    disabled={busy}
+                    onClick={() => onRemoveRecent(recent)}
+                    type="button"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p className="project-selector__empty">暂无最近项目</p>
+            )}
+          </div>
+        ) : null}
+      </div>
+    </section>
   );
 }
 

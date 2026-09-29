@@ -582,11 +582,12 @@ impl Storage {
             }
         }
         transaction.commit()?;
+        self.persist_active_project()?;
         Ok(())
     }
 }
 
-fn export_board(board: &BoardSnapshot) -> Result<String, StorageError> {
+pub(crate) fn export_board(board: &BoardSnapshot) -> Result<String, StorageError> {
     let exported_at = OffsetDateTime::now_utc()
         .format(&Rfc3339)
         .map_err(|error| StorageError::Validation(format!("export time failed: {error}")))?;
@@ -598,6 +599,19 @@ fn export_board(board: &BoardSnapshot) -> Result<String, StorageError> {
     };
     serde_json::to_string_pretty(&document).map_err(|error| {
         StorageError::Validation(format!("planning data could not be serialized: {error}"))
+    })
+}
+
+pub(crate) fn empty_project_json() -> Result<String, StorageError> {
+    export_board(&BoardSnapshot {
+        tasks: Vec::new(),
+        view_settings: crate::domain::ViewSettings {
+            view_mode: crate::domain::ViewMode::Biweek,
+            anchor_date: "1970-01-01".to_owned(),
+            show_dependencies: true,
+            task_column_width: 348,
+            mother_sort_mode: crate::domain::MotherSortMode::Manual,
+        },
     })
 }
 

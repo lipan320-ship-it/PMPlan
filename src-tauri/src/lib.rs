@@ -2,6 +2,7 @@
 
 mod commands;
 mod domain;
+mod project_file;
 mod storage;
 mod transfer;
 
@@ -21,6 +22,12 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::load_board,
+            commands::get_project_state,
+            commands::open_project,
+            commands::create_project,
+            commands::save_active_project,
+            commands::save_as_project,
+            commands::remove_recent_project,
             commands::create_mother_task,
             commands::rename_mother_task,
             commands::set_mother_expanded,

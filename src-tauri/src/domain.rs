@@ -2,6 +2,57 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub enum WorkspaceMode {
+    #[serde(rename = "namedProject")]
+    NamedProject,
+    #[serde(rename = "unnamedLegacy")]
+    UnnamedLegacy,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum ProjectSaveStatus {
+    Saved,
+    Saving,
+    Unsaved,
+    Conflict,
+    Error,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum RecentProjectStatus {
+    Available,
+    Missing,
+    Unreadable,
+    Invalid,
+    Conflict,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RecentProject {
+    pub path: String,
+    pub name: String,
+    pub parent_path: String,
+    pub status: RecentProjectStatus,
+    pub last_error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectState {
+    pub active_path: Option<String>,
+    pub active_name: Option<String>,
+    pub parent_path: Option<String>,
+    pub workspace_mode: WorkspaceMode,
+    pub save_status: ProjectSaveStatus,
+    pub last_error: Option<String>,
+    pub recent: Vec<RecentProject>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct BoardSnapshot {
     pub tasks: Vec<MotherTask>,
     pub view_settings: ViewSettings,
