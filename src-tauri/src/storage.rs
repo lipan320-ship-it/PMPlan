@@ -1446,6 +1446,38 @@ mod tests {
     }
 
     #[test]
+    fn caps_recent_projects_at_eight_without_deleting_source_files() {
+        let directory = tempdir().expect("create temp directory");
+        let database_path = directory.path().join("pmplan.sqlite3");
+        let mut storage = Storage::open(&database_path).expect("open database");
+        let mut paths = Vec::new();
+        for index in 0..9 {
+            let path = directory.path().join(format!("project-{index}.json"));
+            fs::write(&path, r#"{"version":"1.0","tasks":[]}"#).expect("write project");
+            storage.open_project(&path).expect("open project");
+            paths.push(path);
+        }
+
+        let state = storage.project_state().expect("load recent projects");
+        assert_eq!(state.recent.len(), 8);
+        assert!(state
+            .recent
+            .iter()
+            .all(|recent| recent.path
+                != normalize_project_path(&paths[0]).unwrap().to_string_lossy()));
+        assert!(paths[0].exists());
+
+        storage
+            .remove_recent_project(&paths[8])
+            .expect("remove recent record");
+        assert!(paths[8].exists());
+        assert_eq!(
+            storage.project_state().expect("reload state").recent.len(),
+            7
+        );
+    }
+
+    #[test]
     fn persists_mother_tags_and_tag_sort_mode() {
         let mut storage = Storage::open_in_memory().expect("open database");
         let mother = storage

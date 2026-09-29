@@ -41,7 +41,12 @@ pub fn normalize_project_path(path: &Path) -> Result<PathBuf, ProjectFileError> 
         std::env::current_dir()?.join(path)
     };
     let normalized = fs::canonicalize(&absolute).unwrap_or(absolute);
-    Ok(normalized)
+    let display_path = normalized.to_string_lossy();
+    if let Some(stripped) = display_path.strip_prefix("\\\\?\\") {
+        Ok(PathBuf::from(stripped))
+    } else {
+        Ok(normalized)
+    }
 }
 
 pub fn read_project_file(path: &Path) -> Result<(String, FileFingerprint), ProjectFileError> {
