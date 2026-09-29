@@ -107,7 +107,7 @@ pub fn write_project_file(
         file.sync_all()?;
         drop(file);
 
-        if let Err(error) = fs::rename(&temp_path, path) {
+        if let Err(error) = replace_file(&temp_path, path) {
             // Windows does not replace an existing file with rename. The
             // fallback keeps the operation in the target directory and is
             // used only when the platform cannot perform replacement rename.
@@ -125,6 +125,49 @@ pub fn write_project_file(
         let _ = fs::remove_file(&temp_path);
     }
     write_result
+}
+
+#[cfg(not(windows))]
+fn replace_file(source: &Path, target: &Path) -> io::Result<()> {
+    fs::rename(source, target)
+}
+
+#[cfg(windows)]
+fn replace_file(source: &Path, target: &Path) -> io::Result<()> {
+    use std::{ffi::OsStr, os::windows::ffi::OsStrExt};
+
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn MoveFileExW(
+            existing_file_name: *const u16,
+            new_file_name: *const u16,
+            flags: u32,
+        ) -> i32;
+    }
+
+    const MOVEFILE_REPLACE_EXISTING: u32 = 0x1;
+    const MOVEFILE_WRITE_THROUGH: u32 = 0x8;
+    let source: Vec<u16> = OsStr::new(source)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let target: Vec<u16> = OsStr::new(target)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    // SAFETY: both paths are NUL-terminated UTF-16 buffers owned for the call.
+    let result = unsafe {
+        MoveFileExW(
+            source.as_ptr(),
+            target.as_ptr(),
+            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
+        )
+    };
+    if result == 0 {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
 }
 
 fn fingerprint_for_bytes(path: &Path, bytes: &[u8]) -> Result<FileFingerprint, ProjectFileError> {
