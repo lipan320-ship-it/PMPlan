@@ -22,6 +22,15 @@ Tauri 官方 SQL 插件提供 SQLite 和 migration 支持，但当前 JavaScript
 7. 前端定义 storage gateway 接口，并提供 Tauri adapter 和测试用内存 adapter。
 8. IPC 错误使用稳定的错误代码和可展示消息，不把原始 SQL 或本机路径直接暴露给 UI。
 
+## 2026-09-29 项目文件持久化范围
+
+本 ADR 的 Rust 存储层和 SQLite 事务边界继续有效，但“SQLite 是唯一运行时权威介质”的范围仅适用于当前缓存和未命名工作区。命名项目由 [ADR-0003](ADR-0003-project-file-persistence.md) 增加一层项目会话：
+
+* `openProject`、`createProject`、`saveActiveProject`、`saveAsProject` 和最近项目操作仍必须通过 Rust 业务命令完成；React 不直接拼接路径或写文件。
+* 打开 JSON 后，规划修改先在 SQLite 事务中提交，再由同一存储层根据修改时间 + 内容哈希检查，使用同目录临时文件原子回写 JSON。
+* SQLite 提交与 JSON 回写不是跨存储单一事务。JSON 写入失败、外部修改、删除或只读时，缓存保留为未保存 / 冲突状态，IPC 不得返回“已保存”。
+* 视图设置、最近项目和文件指纹属于 SQLite 应用元数据，不进入规划 JSON；已有覆盖 / 合并导入仍在 Rust 单事务内作用于当前缓存，成功后按活动项目回写规则保存。
+
 ## 初始命令边界
 
 命令按业务用途组织，包括：
@@ -57,6 +66,8 @@ Tauri 官方 SQL 插件提供 SQLite 和 migration 支持，但当前 JavaScript
 ### 直接保存单个 JSON 文件
 
 不采用。频繁自动保存、关系完整性、并发写入失败恢复和未来 schema migration 都需要额外自行实现。
+
+这条历史结论拒绝的是“让前端直接把 JSON 当作唯一运行时数据库”的实现。命名项目现在允许通过 ADR-0003 定义的 Rust 会话层回写用户 JSON；事务、校验、冲突检测、原子替换和未保存恢复仍由本 ADR 的存储层负责。
 
 ## 影响
 

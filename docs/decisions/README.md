@@ -15,6 +15,7 @@
 | --- | --- | --- | --- |
 | [ADR-0001](ADR-0001-local-first-tauri-desktop.md) | 采用本地优先的 Tauri 桌面应用 | Accepted | 2026-09-17 |
 | [ADR-0002](ADR-0002-rust-sqlite-storage-boundary.md) | 通过 Rust 存储层封装 SQLite | Accepted | 2026-09-17 |
+| [ADR-0003](ADR-0003-project-file-persistence.md) | 以项目 JSON 文件作为命名规划的持久化边界 | Accepted | 2026-09-29 |
 
 ## 新增规则
 
