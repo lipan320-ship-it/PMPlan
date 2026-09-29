@@ -1121,6 +1121,12 @@ export function BoardPage({ gateway }: BoardPageProps) {
 
   const handleReloadExternalProject = async () => {
     if (projectState?.activePath) {
+      if (
+        projectState.saveStatus === "conflict" &&
+        !window.confirm("重新加载会放弃当前尚未写入项目文件的修改，是否继续？")
+      ) {
+        return;
+      }
       await openProjectPath(projectState.activePath);
     }
   };
