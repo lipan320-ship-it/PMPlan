@@ -34,7 +34,11 @@ npm run build:desktop
 npm run build:installer
 ```
 
-`build:desktop` 生成不打安装包的 debug EXE，用于开发阶段验证；`build:installer` 生成 Windows x64 NSIS 安装包。
+日常体验不需要生产构建。命令、入口地址、桌面开发和各类构建产物见[本地体验与构建](docs/development/local-development.md)。
+
+若启动报 `listen EACCES`，可运行 `netsh interface ipv4 show excludedportrange protocol=tcp` 检查 Windows 保留端口。本机原端口 1420 位于 1364–1463 保留范围，开发与预览入口已统一改为 5173。若另选端口，需同步修改 `package.json` 的 `dev` / `preview`、`vite.config.ts` 的 `server.port` 和 `src-tauri/tauri.conf.json` 的 `build.devUrl`。若报端口已占用，先检查是否已有开发服务运行，避免重复启动。
+
+每次准备桌面构建或安装包前，先执行 `npm run version:patch`（或 `npm run version:set -- <major.minor.patch>`）升级版本。版本会同步写入 `package.json`、`package-lock.json`、Tauri 配置和 Rust manifest；所有构建会通过 `check:version` 拒绝版本不一致的工作区。
 
 ## 产品与技术方向
 
@@ -58,10 +62,11 @@ npm run build:installer
 | 发布级变更 | [CHANGELOG.md](CHANGELOG.md) |
 | 参考原型 | [docs/prototypes/README.md](docs/prototypes/README.md) |
 | v0.1 实施计划 | [docs/development/v0.1-implementation-plan.md](docs/development/v0.1-implementation-plan.md) |
+| 本地体验与构建 | [docs/development/local-development.md](docs/development/local-development.md) |
 | 仓库结构约定 | [docs/development/repository-structure.md](docs/development/repository-structure.md) |
 | 使用指南 | [docs/user-guide.md](docs/user-guide.md) |
 | v0.1 验收矩阵 | [docs/requirements/v0.1-acceptance-matrix.md](docs/requirements/v0.1-acceptance-matrix.md) |
-| v0.1.0 发布说明 | [docs/releases/v0.1.0.md](docs/releases/v0.1.0.md) |
+| v0.1.2 发布说明 | [docs/releases/v0.1.2.md](docs/releases/v0.1.2.md) |
 
 ## 文档维护原则
 

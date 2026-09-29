@@ -42,7 +42,11 @@ import {
   type DependencyConflict,
 } from "../../domain/schedule";
 import type { StorageGateway } from "../../storage/gateway";
-import type { ProjectState, RecentProject } from "../../storage/projectTypes";
+import type {
+  ProjectSaveStatus,
+  ProjectState,
+  RecentProject,
+} from "../../storage/projectTypes";
 import type {
   ImportMode,
   ImportPreview,
@@ -72,6 +76,7 @@ import {
   QuarterTimelineHeader,
   QuarterTimelineRows,
 } from "./QuarterTimeline";
+import { useDismissibleMenu } from "./useDismissibleMenu";
 
 interface BoardPageProps {
   gateway: StorageGateway;
@@ -435,6 +440,12 @@ export function BoardPage({ gateway }: BoardPageProps) {
   const [board, setBoard] = useState<BoardSnapshot | null>(null);
   const [projectState, setProjectState] = useState<ProjectState | null>(null);
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
+  const [viewMenuOpen, setViewMenuOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const projectMenuRef = useDismissibleMenu<HTMLElement>(projectMenuOpen, setProjectMenuOpen);
+  const viewMenuRef = useDismissibleMenu<HTMLDivElement>(viewMenuOpen, setViewMenuOpen);
+  const moreMenuRef = useDismissibleMenu<HTMLDivElement>(moreMenuOpen, setMoreMenuOpen);
+  const [showWeekends, setShowWeekends] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
@@ -1202,6 +1213,23 @@ export function BoardPage({ gateway }: BoardPageProps) {
     }
   };
 
+  const handlePlannerPointerDownCapture = (
+    event: ReactPointerEvent<HTMLElement>,
+  ) => {
+    const target = event.target;
+    if (!(target instanceof Element) || target.closest(".row-actions")) {
+      return;
+    }
+
+    const activeElement = document.activeElement;
+    if (
+      activeElement instanceof HTMLElement &&
+      activeElement.closest(".task-row--mother .row-actions")
+    ) {
+      activeElement.blur();
+    }
+  };
+
   const executeImport = async () => {
     if (!importState) {
       return;
@@ -1323,11 +1351,10 @@ export function BoardPage({ gateway }: BoardPageProps) {
     );
   }
 
-  const allExpanded = board.tasks.every((task) => task.expanded);
-
   return (
     <main
       className="planner-shell"
+      onPointerDownCapture={handlePlannerPointerDownCapture}
       onDragEnter={(event) => {
         if (!Array.from(event.dataTransfer.types).includes("Files")) {
           return;
@@ -1348,19 +1375,30 @@ export function BoardPage({ gateway }: BoardPageProps) {
       }}
       onDrop={handleDrop}
     >
-      <PlannerHeader />
-      <ProjectSelector
+      <PlannerHeader
         busy={busy}
-        onCreate={handleCreateProject}
-        onOpen={handleOpenProject}
-        onRemoveRecent={handleRemoveRecentProject}
-        onReloadExternal={handleReloadExternalProject}
-        onRetrySave={handleRetryProjectSave}
-        onSaveAs={handleSaveAsProject}
-        onSelectRecent={(recent) => void openProjectPath(recent.path)}
-        onToggle={() => setProjectMenuOpen((current) => !current)}
-        open={projectMenuOpen}
-        state={projectState}
+        onCreateMother={() => setMotherDialog({ mode: "create" })}
+        projectSelector={
+          <ProjectSelector
+            busy={busy}
+            menuRef={projectMenuRef}
+            onCreate={handleCreateProject}
+            onOpen={handleOpenProject}
+            onRemoveRecent={handleRemoveRecentProject}
+            onReloadExternal={handleReloadExternalProject}
+            onRetrySave={handleRetryProjectSave}
+            onSaveAs={handleSaveAsProject}
+            onSelectRecent={(recent) => void openProjectPath(recent.path)}
+            onToggle={() => {
+              setProjectMenuOpen((current) => !current);
+              setViewMenuOpen(false);
+              setMoreMenuOpen(false);
+            }}
+            open={projectMenuOpen}
+            state={projectState}
+          />
+        }
+        saveStatus={projectState?.saveStatus ?? "saved"}
       />
       <section className="planner-toolbar" aria-label="时间板工具栏">
         <div className="period-controls">
@@ -1463,8 +1501,9 @@ export function BoardPage({ gateway }: BoardPageProps) {
               value={search}
             />
           </label>
-          <label className="dependency-toggle">
+          <label className="sr-only">
             <input
+              aria-label="显示依赖"
               checked={board.viewSettings.showDependencies}
               disabled={busy}
               onChange={(event) =>
@@ -1475,49 +1514,141 @@ export function BoardPage({ gateway }: BoardPageProps) {
               }
               type="checkbox"
             />
-            显示依赖
           </label>
-          {board.tasks.length > 0 ? (
+          <div className="toolbar-menu-anchor" ref={viewMenuRef}>
             <button
-              className="button button--quiet"
+              aria-expanded={viewMenuOpen}
+              aria-haspopup="menu"
+              className="button button--quiet button--with-icon"
               disabled={busy}
-              onClick={() => void handleSetAllExpanded(!allExpanded)}
+              onClick={() => {
+                setViewMenuOpen((current) => !current);
+                setMoreMenuOpen(false);
+                setProjectMenuOpen(false);
+              }}
+              type="button"
             >
-              {allExpanded ? "全部收起" : "全部展开"}
+              <span aria-hidden="true">☷</span>
+              查看
             </button>
-          ) : null}
-          <button
-            className="button button--quiet button--with-icon"
-            disabled={busy}
-            onClick={() => setTemplateOpen(true)}
-          >
-            <svg aria-hidden="true" className="button__icon" viewBox="0 0 24 24">
-              <path d="M7 3.75h7.5L18.25 7.5V20.25H7z" />
-              <path d="M14.5 3.75V7.5h3.75M10 11.25h5.25M10 14.5h5.25" />
-            </svg>
-            导入模板
-          </button>
-          <button
-            className="button button--quiet"
-            disabled={busy}
-            onClick={() => void handleImportRequest()}
-          >
-            导入 JSON
-          </button>
-          <button
-            className="button button--quiet"
-            disabled={busy}
-            onClick={() => void handleExport()}
-          >
-            导出 JSON
-          </button>
-          <button
-            className="button button--primary"
-            disabled={busy}
-            onClick={() => setMotherDialog({ mode: "create" })}
-          >
-            ＋ 新建母任务
-          </button>
+            {viewMenuOpen ? (
+              <div className="toolbar-popover toolbar-popover--view" role="menu">
+                <label className="toolbar-checkrow">
+                  <input
+                    checked={board.viewSettings.showDependencies}
+                    disabled={busy}
+                    onChange={(event) =>
+                      void saveViewSettings({
+                        ...board.viewSettings,
+                        showDependencies: event.target.checked,
+                      })
+                    }
+                    type="checkbox"
+                  />
+                  显示依赖关系
+                </label>
+                <label className="toolbar-checkrow">
+                  <input
+                    checked={showWeekends}
+                    onChange={(event) => setShowWeekends(event.target.checked)}
+                    type="checkbox"
+                  />
+                  标记周末
+                </label>
+                {board.tasks.length > 0 ? (
+                  <button
+                    className="toolbar-menu-item"
+                    disabled={busy}
+                    onClick={() => {
+                      setViewMenuOpen(false);
+                      void handleSetAllExpanded(true);
+                    }}
+                    type="button"
+                  >
+                    全部展开
+                  </button>
+                ) : null}
+                {board.tasks.length > 0 ? (
+                  <button
+                    className="toolbar-menu-item"
+                    disabled={busy}
+                    onClick={() => {
+                      setViewMenuOpen(false);
+                      void handleSetAllExpanded(false);
+                    }}
+                    type="button"
+                  >
+                    全部收起
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+          <div className="toolbar-menu-anchor" ref={moreMenuRef}>
+            <button
+              aria-expanded={moreMenuOpen}
+              aria-label="更多数据操作"
+              aria-haspopup="menu"
+              className="icon-button toolbar-more-button"
+              disabled={busy}
+              onClick={() => {
+                setMoreMenuOpen((current) => !current);
+                setViewMenuOpen(false);
+                setProjectMenuOpen(false);
+              }}
+              type="button"
+            >
+              …
+            </button>
+            {moreMenuOpen ? (
+              <div className="toolbar-popover toolbar-popover--more" role="menu">
+                <button
+                  className="toolbar-menu-item"
+                  disabled={busy}
+                  onClick={() => {
+                    setMoreMenuOpen(false);
+                    setTemplateOpen(true);
+                  }}
+                  type="button"
+                >
+                  导入模板
+                </button>
+                <button
+                  className="toolbar-menu-item"
+                  disabled={busy}
+                  onClick={() => {
+                    setMoreMenuOpen(false);
+                    void handleImportRequest();
+                  }}
+                  type="button"
+                >
+                  导入 JSON
+                </button>
+                <button
+                  className="toolbar-menu-item"
+                  disabled={busy}
+                  onClick={() => {
+                    setMoreMenuOpen(false);
+                    void handleExport();
+                  }}
+                  type="button"
+                >
+                  导出 JSON
+                </button>
+              </div>
+            ) : null}
+            <button
+              className="sr-only"
+              disabled={busy}
+              onClick={() => {
+                setMoreMenuOpen(false);
+                setTemplateOpen(true);
+              }}
+              type="button"
+            >
+              导入模板
+            </button>
+          </div>
         </div>
       </section>
 
@@ -1565,6 +1696,7 @@ export function BoardPage({ gateway }: BoardPageProps) {
           tasks={board.tasks}
           conflicts={dependencyConflicts}
           showDependencies={board.viewSettings.showDependencies}
+          showWeekends={showWeekends}
           taskColumnWidth={taskColumnWidth}
           onTaskColumnWidthChange={handleTaskColumnWidthChange}
           onTaskColumnWidthCommit={commitTaskColumnWidth}
@@ -1724,6 +1856,7 @@ export function BoardPage({ gateway }: BoardPageProps) {
 
 interface ProjectSelectorProps {
   busy: boolean;
+  menuRef: RefObject<HTMLElement | null>;
   open: boolean;
   state: ProjectState | null;
   onToggle: () => void;
@@ -1738,6 +1871,7 @@ interface ProjectSelectorProps {
 
 function ProjectSelector({
   busy,
+  menuRef,
   open,
   state,
   onToggle,
@@ -1766,7 +1900,7 @@ function ProjectSelector({
   } as const;
 
   return (
-    <section className="project-selector" aria-label="项目规划">
+    <section className="project-selector" aria-label="项目规划" ref={menuRef}>
       <div className="project-selector__current">
         <button
           aria-expanded={open}
@@ -1855,25 +1989,55 @@ function ProjectSelector({
   );
 }
 
-function PlannerHeader() {
+function PlannerHeader({
+  busy,
+  onCreateMother,
+  projectSelector,
+  saveStatus,
+}: {
+  busy: boolean;
+  onCreateMother: () => void;
+  projectSelector: ReactNode;
+  saveStatus: ProjectSaveStatus;
+}) {
+  const saveLabel: Record<ProjectSaveStatus, string> = {
+    saved: "已自动保存",
+    saving: "保存中",
+    unsaved: "未保存",
+    conflict: "外部已修改",
+    error: "保存失败",
+  };
   return (
     <header className="planner-header">
-      <div className="brand-lockup">
-        <span className="brand-lockup__mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none">
-            <path d="M5 6h14M5 12h9M5 18h14" stroke="currentColor" strokeWidth="2" />
-            <circle cx="16.5" cy="12" r="2.5" fill="currentColor" />
-          </svg>
-        </span>
-        <span>
-          <strong>工作规划时间板</strong>
-          <small>LOCAL PLANNER</small>
-        </span>
+      <div className="planner-header__left">
+        <div className="brand-lockup">
+          <span className="brand-lockup__mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M5 6h14M5 12h9M5 18h14" stroke="currentColor" strokeWidth="2" />
+              <circle cx="16.5" cy="12" r="2.5" fill="currentColor" />
+            </svg>
+          </span>
+          <span>
+            <strong>工作规划时间板</strong>
+            <small>LOCAL PLANNER</small>
+          </span>
+        </div>
+        {projectSelector}
       </div>
-      <span className="local-status">
-        <i aria-hidden="true" />
-        本地自动保存
-      </span>
+      <div className="planner-header__actions">
+        <span className={`local-status local-status--${saveStatus}`}>
+          <i aria-hidden="true" />
+          {saveLabel[saveStatus]}
+        </span>
+        <button
+          className="button button--primary planner-header__new"
+          disabled={busy}
+          onClick={onCreateMother}
+          type="button"
+        >
+          ＋ 新建母任务
+        </button>
+      </div>
     </header>
   );
 }
@@ -1887,6 +2051,7 @@ interface TimelineBoardProps {
   busy: boolean;
   conflicts: DependencyConflict[];
   showDependencies: boolean;
+  showWeekends: boolean;
   onToggleMother: (mother: MotherTask) => void;
   onEditMother: (mother: MotherTask) => void;
   onRequestDeleteMother: (mother: MotherTask) => void;
@@ -1930,6 +2095,7 @@ function TimelineBoard({
   busy,
   conflicts,
   showDependencies,
+  showWeekends,
   onToggleMother,
   onEditMother,
   onRequestDeleteMother,
@@ -2458,7 +2624,7 @@ function TimelineBoard({
                     const weekday = dayOfWeek(date);
                     return (
                       <div
-                        className={`date-cell ${weekday === 0 || weekday === 6 ? "is-weekend" : ""} ${date === today ? "is-today" : ""}`}
+                        className={`date-cell ${showWeekends && (weekday === 0 || weekday === 6) ? "is-weekend" : ""} ${date === today ? "is-today" : ""}`}
                         key={date}
                       >
                         <strong>{formatShortDate(date)}</strong>
@@ -2507,6 +2673,7 @@ function TimelineBoard({
                       relatedMotherIds={relatedMotherIds}
                       range={range}
                       row={row}
+                      showWeekends={showWeekends}
                     />
                   ))}
                 </>
@@ -2698,13 +2865,15 @@ function TaskTreeRow({
         >
           {row.mother.name}
         </button>
-        <span
-          className="mother-tag"
-          data-tone={getMotherTagTone(motherTag)}
-          title={motherTag ? `标签：${motherTag}` : "未设置标签"}
-        >
-          {motherTag ?? "未设置"}
-        </span>
+        {motherTag ? (
+          <span
+            className="mother-tag"
+            data-tone={getMotherTagTone(motherTag)}
+            title={`标签：${motherTag}`}
+          >
+            {motherTag}
+          </span>
+        ) : null}
         <span className="task-count">{row.mother.subTasks.length}</span>
         {row.mother.dependsOn.length > 0 ? (
           <span
@@ -2833,6 +3002,7 @@ function TaskTreeRow({
 
 interface TimelineRowProps {
   row: BoardRow;
+  showWeekends: boolean;
   range: ViewRange;
   columnWidth: number;
   busy: boolean;
@@ -2850,6 +3020,7 @@ interface TimelineRowProps {
 
 function TimelineRow({
   row,
+  showWeekends,
   range,
   columnWidth,
   busy,
@@ -2876,7 +3047,7 @@ function TimelineRow({
         const weekday = dayOfWeek(date);
         return (
           <span
-            className={weekday === 0 || weekday === 6 ? "is-weekend" : ""}
+            className={showWeekends && (weekday === 0 || weekday === 6) ? "is-weekend" : ""}
             key={date}
           />
         );

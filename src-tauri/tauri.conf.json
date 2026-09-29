@@ -1,11 +1,11 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "工作规划时间板",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "identifier": "com.pmplan.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "devUrl": "http://127.0.0.1:1420",
+    "devUrl": "http://127.0.0.1:5173",
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },

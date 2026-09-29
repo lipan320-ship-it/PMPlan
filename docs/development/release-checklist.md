@@ -2,6 +2,10 @@
 
 ## 发布前检查
 
+1. 使用 `npm run version:patch`（或 `npm run version:set -- <major.minor.patch>`）升级版本；确认 `npm run check:version` 通过。
+2. 更新 `CHANGELOG.md` 和对应的发布说明。
+3. 再执行下面的验证和构建命令。
+
 ```powershell
 npm ci
 npm run licenses:generate

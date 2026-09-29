@@ -10,14 +10,17 @@
 | `decisions/` | 影响长期实现方向的产品与技术决策 | [ADR 索引](decisions/README.md) |
 | `iterations/` | 每轮工作的目标、结果、验证与遗留事项 | [迭代索引](iterations/README.md) |
 | `prototypes/` | 非生产原型及其适用边界 | [原型说明](prototypes/README.md) |
-| `development/` | 实施计划、仓库结构、开发流程及工程约定 | [v0.1 实施计划](development/v0.1-implementation-plan.md)、[仓库结构约定](development/repository-structure.md) |
+| `development/` | 实施计划、仓库结构、开发流程及工程约定 | [本地体验与构建](development/local-development.md)、[v0.1 实施计划](development/v0.1-implementation-plan.md)、[仓库结构约定](development/repository-structure.md) |
 
 其他交付文档：
 
+- [本地体验与构建](development/local-development.md)
 - [v0.1 使用指南](user-guide.md)
 - [v0.1 验收矩阵](requirements/v0.1-acceptance-matrix.md)
 - [Windows 发布检查清单](development/release-checklist.md)
 - [第三方依赖许可清单](third-party-licenses.md)
+- [v0.1.2 发布说明](releases/v0.1.2.md)
+- [v0.1.1 发布说明](releases/v0.1.1.md)
 - [v0.1.0 发布说明](releases/v0.1.0.md)
 
 ## 信息归属

@@ -13,6 +13,8 @@
 | [2026-09-18](2026-09-18-subtask-reorder.md) | 子任务在母任务内拖动排序 | Completed |
 | [2026-09-18](2026-09-18-timeline-continuous-pan.md) | 时间轴无边界连续平移 | Completed |
 | [2026-09-23](2026-09-23-quarter-overview.md) | 连续季度总览时间轴 | Completed |
+| [2026-09-29](2026-09-29-work-planner-layout.md) | 工作规划时间板布局优化 | Completed |
+| [2026-09-29](2026-09-29-dev-server-port.md) | 开发服务端口与本地体验说明 | Completed |
 
 ## 命名规则
 
