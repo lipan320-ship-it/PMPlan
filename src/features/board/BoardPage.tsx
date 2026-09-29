@@ -740,9 +740,8 @@ export function BoardPage({ gateway }: BoardPageProps) {
       });
       setToast({ tone: "success", message: "母任务排序已更新" });
     } catch (error) {
-      setBoard((current) =>
-        current ? { ...current, tasks: originalTasks } : current,
-      );
+      await reloadBoard();
+      await reloadProjectState();
       setToast({ tone: "error", message: messageFromError(error) });
     } finally {
       setBusy(false);
@@ -791,9 +790,8 @@ export function BoardPage({ gateway }: BoardPageProps) {
       });
       setToast({ tone: "success", message: "子任务排序已更新" });
     } catch (error) {
-      setBoard((current) =>
-        current ? { ...current, tasks: originalTasks } : current,
-      );
+      await reloadBoard();
+      await reloadProjectState();
       setToast({ tone: "error", message: messageFromError(error) });
     } finally {
       setBusy(false);
@@ -931,12 +929,8 @@ export function BoardPage({ gateway }: BoardPageProps) {
         message: `已将“${subTask.name}”调整为 ${update.startDate} – ${update.endDate ?? update.startDate}`,
       });
     } catch (error) {
-      setBoard((current) =>
-        applyDates(current, {
-          startDate: subTask.startDate,
-          endDate: subTask.endDate,
-        }),
-      );
+      await reloadBoard();
+      await reloadProjectState();
       setToast({ tone: "error", message: messageFromError(error) });
     } finally {
       setBusy(false);
